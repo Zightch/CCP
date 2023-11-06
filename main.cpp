@@ -6,5 +6,5 @@ int main(int argc, char *argv[]) {
     QApplication a(argc, argv);
     CSCPTest w;
     w.show();
-    return a.exec();
+    return QApplication::exec();
 }
