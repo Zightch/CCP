@@ -6,10 +6,12 @@
 
 #include "ShowMsg.h"
 #include "ui_ShowMsg.h"
+#include "tools/IPTools.h"
 
 ShowMsg::ShowMsg(CSCP *cscp, QWidget *parent) : QWidget(parent), ui(new Ui::ShowMsg) {
     ui->setupUi(this);
     this->cscp = cscp;
+    setWindowTitle(IPPort(cscp->getIP(), cscp->getPort()));
     connect(cscp, &CSCP::readyRead, this, &ShowMsg::recv);
     connect(ui->send, &QPushButton::clicked, this, &ShowMsg::send);
 }

@@ -6,16 +6,15 @@
 CSCP::CSCP(QObject *parent,const QHostAddress&IP, unsigned short p) : QObject(parent), IP(IP),port(p) {
     cm = ((CSCPManager *) parent);
     connect(this, &CSCP::procS_, this, &CSCP::procF_, Qt::QueuedConnection);
-    connect(this, &CSCP::tickS_, this, &CSCP::tickF_, Qt::QueuedConnection);
     connect(&hbt, &QTimer::timeout, this, [&]() {
         if (cs == 1) {
             auto *cdpt = new CDPT(this);
             cdpt->cdp.cf = 0x05;
             cdpt->cdp.SID = ID;
             sendBuf.append(cdpt);
+            updateWnd_();
         }
     });
-    tickF_();
 }
 
 void CSCP::close(const QByteArray &data) {
@@ -152,6 +151,7 @@ void CSCP::procF_(QByteArray data) {
             }
         }
     }
+    updateWnd_();
 }
 
 void CSCP::sendNow(const QByteArray &data) {
@@ -160,6 +160,7 @@ void CSCP::sendNow(const QByteArray &data) {
         tmp->cdp.data = data;
         tmp->cdp.cf = 0x60;
         sendBuf.append(tmp);
+        updateWnd_();
     }
 }
 
@@ -200,6 +201,7 @@ void CSCP::send(const QByteArray &data) {
             } else
                 throw "数据内容超过最大连续发送大小";
         }
+        updateWnd_();
     }
 }
 
@@ -214,7 +216,9 @@ QByteArray CSCP::read() {
 }
 
 void CSCP::setDataBlockSize(unsigned short us) {
-    dataBlockSize = us;
+    if (us >= 65530)
+        dataBlockSize = 65530;
+    else dataBlockSize = us;
 }
 
 void CSCP::setHBTTime(unsigned short time) {
@@ -244,6 +248,7 @@ void CSCP::connect_(const QByteArray &data) {
         }
         sendBuf.append(tmp);
         cs = 0;//半连接
+        updateWnd_();
     }
 }
 
@@ -273,6 +278,7 @@ void CSCP::sendTimeout_() {
         hbt.stop();
         emit disconnected("对方应答超时");
     }
+    updateWnd_();
 }
 
 void CSCP::sendPackage_(CDPT *cdpt) {
@@ -304,6 +310,7 @@ void CSCP::NA_ACK(unsigned short AID) {
     tmp->AID = AID;
     tmp->cdp.cf = (char) 0x22;
     sendBuf.append(tmp);
+    updateWnd_();
 }
 
 void CSCP::updateWnd_() {
@@ -350,11 +357,6 @@ void CSCP::updateWnd_() {
         OID++;
     }
     if (isRead) emit readyRead();
-}
-
-void CSCP::tickF_() {
-    updateWnd_();
-    emit tickS_();
 }
 
 CDPT::CDPT(QObject *parent) : QTimer(parent){

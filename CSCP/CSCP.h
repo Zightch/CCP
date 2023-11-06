@@ -71,8 +71,6 @@ signals:
 
     void connected_();
 
-    void tickS_();
-
 private:
     void connect_(const QByteArray & = "");
 
@@ -84,9 +82,7 @@ private:
 
     void NA_ACK(unsigned short AID);//应答
 
-    void updateWnd_();//更新发送窗口
-
-    void tickF_();
+    void updateWnd_();//更新窗口
 
     CSCPManager *cm = nullptr;//CSCPManager
     char cs = -1;//-1未连接, 0半连接, 1连接成功, 2准备断开连接
