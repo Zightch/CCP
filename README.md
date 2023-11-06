@@ -41,7 +41,7 @@
 * 本协议需要自行实现应用层协议管理器和协议对象, 关于实现说明均在下文可查看
 
 ## 协议表
-<table style="text-align:center;" border="1" cellspacing="0">
+<table style="text-align:center;">
     <tr>
         <td>字节</td>
         <td>0</td>
@@ -109,7 +109,6 @@
 
 ### 含义解析
 * cf命令和属性: 表示当前发送包的命令和属性
-* ts时间戳: 表示发送端发包的时间
 * SID本包ID: 表示当前自己发包的ID号, 为了避免乱包以及方便丢包重发  
   * 当cmd的NA位为true时, 本包ID可忽略
   * 当包ID大于65535时从0开始
@@ -117,7 +116,7 @@
 * data用户数据: 表示该包中的用户数据
 
 ## cf命令和属性
-<table style="text-align:center;" border="1" cellspacing="0">
+<table style="text-align:center;">
     <tr>
         <td>位</td>
         <td>7</td>
