@@ -41,7 +41,7 @@
 * 本协议需要自行实现应用层协议管理器和协议对象, 关于实现说明均在下文可查看
 
 ## 协议表
-<table style="text-align:center;">
+<table>
     <tr>
         <td>字节</td>
         <td>0</td>
@@ -53,39 +53,39 @@
         <td>...</td>
     </tr>
     <tr>
-        <td>N1</td>
+        <td>S0</td>
         <td>cf</td>
         <td colspan=2>SID</td>
         <td colspan=4></td>
     </tr>
     <tr>
-        <td>N2</td>
+        <td>S1</td>
         <td>cf</td>
         <td colspan=2>AID</td>
         <td colspan=4></td>
     </tr>
     <tr>
-        <td>N3</td>
+        <td>S2</td>
         <td>cf</td>
         <td colspan=2>SID</td>
         <td colspan=2>AID</td>
         <td colspan=2></td>
     </tr>
     <tr>
-        <td>N4</td>
+        <td>S3</td>
         <td>cf</td>
         <td colspan=5>data</td>
         <td>...</td>
     </tr>
     <tr>
-        <td>N5</td>
+        <td>S4</td>
         <td>cf</td>
         <td colspan=2>SID</td>
         <td colspan=3>data</td>
         <td>...</td>
     </tr>
     <tr>
-        <td>N6</td>
+        <td>S5</td>
         <td>cf</td>
         <td colspan=2>SID</td>
         <td colspan=2>AID</td>
@@ -105,7 +105,7 @@
 ### 协议表说明
 * 协议表中前1个字节固定长度: cf
 * 从第2个字节开始为可变数据结构
-* N1 ~ N6 分别对应6种不同的结构体, 如何确定结构体请参见[cf](#cf命令和属性)字段解析
+* S0 ~ S5 分别对应6种不同的结构体, 如何确定结构体请参见[cf](#cf命令和属性)字段解析
 
 ### 含义解析
 * cf命令和属性: 表示当前发送包的命令和属性
@@ -116,7 +116,7 @@
 * data用户数据: 表示该包中的用户数据
 
 ## cf命令和属性
-<table style="text-align:center;">
+<table>
     <tr>
         <td>位</td>
         <td>7</td>
@@ -233,3 +233,15 @@ sequenceDiagram
 * 如果有重复连接同一个主机的情况, 管理器可以直接检索连接列表里已连接的对象, 并直接触发连接成功, 返回该对象
 * 本协议不允许使用域名, 只能使用IP地址连接  
   若迫不得已使用域名, 请自行实现域名解析与多条目检索等功能
+
+<style>
+    table {
+        border-collapse: collapse; /* 合并单元格的边框 */
+        text-align: center; /* 文本居中 */
+    }
+    td {
+        border: 1px solid black; /* 设置单元格的边框为黑色 */
+        padding: 5px; /* 设置单元格的内边距为5像素 */
+        text-align: center; /* 文本居中 */
+    }
+</style>
