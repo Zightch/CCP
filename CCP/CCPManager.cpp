@@ -112,14 +112,7 @@ QByteArray CCPManager::bind(const QByteArray &IP, unsigned short port) {
         udp = new QUdpSocket(this);
         if (udp->bind(ip, port)) {
             udpErrorInfo = "";
-            switch (ipProtocol) {
-                case 1:
-                    connect(udp, &QUdpSocket::readyRead, this, &CCPManager::recvIPv4_);
-                    break;
-                case 2:
-                    connect(udp, &QUdpSocket::readyRead, this, &CCPManager::recvIPv6_);
-                    break;
-            }
+            connect(udp, &QUdpSocket::readyRead, this, &CCPManager::recv_);
         } else {
             udpErrorInfo = udp->errorString().toLocal8Bit();
             delete udp;
@@ -301,22 +294,10 @@ void CCPManager::requestInvalid_(const QByteArray&) {
     delete c;
 }
 
-void CCPManager::recvIPv4_() {
-    while (ipv4->hasPendingDatagrams()) {
+void CCPManager::recv_() {
+    auto udp = (QUdpSocket*)sender();
+    while (udp->hasPendingDatagrams()) {
         auto datagrams = ipv4->receiveDatagram();
-        auto IP = datagrams.senderAddress();
-        auto port = datagrams.senderPort();
-        auto data = datagrams.data();
-        if (!data.isEmpty()) {
-            proc_(IP, port, data);
-            emit cLog("↓ " + IPPort(IP, port) + " : " + toHex(data));
-        }
-    }
-}
-
-void CCPManager::recvIPv6_() {
-    while (ipv6->hasPendingDatagrams()) {
-        auto datagrams = ipv6->receiveDatagram();
         auto IP = datagrams.senderAddress();
         auto port = datagrams.senderPort();
         auto data = datagrams.data();

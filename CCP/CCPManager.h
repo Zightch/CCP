@@ -76,9 +76,7 @@ private:
 
     void requestInvalid_(const QByteArray&);
 
-    void recvIPv4_();
-
-    void recvIPv6_();
+    void recv_();
 
     Trie<CCP *> ccp;//已连接的
 
