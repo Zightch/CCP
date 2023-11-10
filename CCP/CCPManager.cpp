@@ -297,7 +297,7 @@ void CCPManager::requestInvalid_(const QByteArray&) {
 void CCPManager::recv_() {
     auto udp = (QUdpSocket*)sender();
     while (udp->hasPendingDatagrams()) {
-        auto datagrams = ipv4->receiveDatagram();
+        auto datagrams = udp->receiveDatagram();
         auto IP = datagrams.senderAddress();
         auto port = datagrams.senderPort();
         auto data = datagrams.data();
