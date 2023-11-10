@@ -1,9 +1,10 @@
-# CSCP协议
-### 版本22
-### CSG framework's Server and Client communication Protocol
-### CSG框架 服务器与客户端通信协议
+# CCP协议
+### 版本23
+### CSG framework host Communication Protocol
+### CSG框架 主机通信协议
 
 ## 更新日志
+* CSCP更名CCP(23)
 * 解除对IPv4和IPv6的限制(22)
 * 规定协议只能使用小端序(21)
 * CSCP重构(20)

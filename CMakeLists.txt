@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
-
-project(CSCPTest VERSION 0.1 LANGUAGES CXX)
+set(projectName CCPTest)
+project(${projectName} VERSION 0.1 LANGUAGES CXX)
 
 if (WIN32)
     set(CMAKE_PREFIX_PATH "E:\\Qt\\6.6.0\\mingw_64\\lib\\cmake")
@@ -22,12 +22,12 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Network)
 
 set(PROJECT_SOURCES
         main.cpp
-        CSCPTest/CSCPTest.cpp
-        CSCPTest/CSCPTest.ui
+        CCPTest/CCPTest.cpp
+        CCPTest/CCPTest.ui
         ShowMsg/ShowMsg.cpp
         ShowMsg/ShowMsg.ui
-        CSCP/CSCP.cpp
-        CSCP/CSCPManager.cpp
+        CCP/CCP.cpp
+        CCP/CCPManager.cpp
         tools/Dump.cpp
         tools/hex.cpp
         tools/IPTools.cpp
@@ -37,30 +37,30 @@ set(PROJECT_SOURCES
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
-    qt_add_executable(CSCPTest
+    qt_add_executable(${projectName}
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
     )
 # Define target properties for Android with Qt 6 as:
-#    set_property(TARGET CSCPTest APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
+#    set_property(TARGET CCP APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
 #                 ${CMAKE_CURRENT_SOURCE_DIR}/android)
 # For more information, see https://doc.qt.io/qt-6/qt-add-executable.html#target-creation
 else()
     if(ANDROID)
-        add_library(CSCPTest SHARED
+        add_library(${projectName} SHARED
             ${PROJECT_SOURCES}
         )
 # Define properties for Android with Qt 5 after find_package() calls as:
 #    set(ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android")
     else()
-        add_executable(CSCPTest
+        add_executable(${projectName}
             ${PROJECT_SOURCES}
         )
     endif()
 endif()
 
 target_link_libraries(
-        CSCPTest
+        ${projectName}
         PRIVATE
         Qt${QT_VERSION_MAJOR}::Widgets
         Qt${QT_VERSION_MAJOR}::Network
@@ -70,9 +70,9 @@ target_link_libraries(
 # If you are developing for iOS or macOS you should consider setting an
 # explicit, fixed bundle identifier manually though.
 if(${QT_VERSION} VERSION_LESS 6.1.0)
-  set(BUNDLE_ID_OPTION MACOSX_BUNDLE_GUI_IDENTIFIER com.example.CSCPTest)
+  set(BUNDLE_ID_OPTION MACOSX_BUNDLE_GUI_IDENTIFIER com.example.${projectName})
 endif()
-set_target_properties(CSCPTest PROPERTIES
+set_target_properties(${projectName} PROPERTIES
     ${BUNDLE_ID_OPTION}
     MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
     MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
@@ -81,12 +81,12 @@ set_target_properties(CSCPTest PROPERTIES
 )
 
 include(GNUInstallDirs)
-install(TARGETS CSCPTest
+install(TARGETS ${projectName}
     BUNDLE DESTINATION .
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
 if(QT_VERSION_MAJOR EQUAL 6)
-    qt_finalize_executable(CSCPTest)
+    qt_finalize_executable(${projectName})
 endif()

@@ -1,16 +1,16 @@
 #pragma once
 #include <QUdpSocket>
 #include <QMap>
-#include "CSCP.h"
+#include "CCP.h"
 #include "tools/Trie.hpp"
 
-class CSCPManager : public QObject {
+class CCPManager : public QObject {
 Q_OBJECT
 
 public:
-    explicit CSCPManager(QObject * = nullptr);
+    explicit CCPManager(QObject * = nullptr);
 
-    ~CSCPManager() override;
+    ~CCPManager() override;
 
     QByteArrayList bind(unsigned short);
 
@@ -80,17 +80,17 @@ private:
 
     void recvIPv6_();
 
-    Trie<CSCP *> cscp;//已连接的
+    Trie<CCP *> ccp;//已连接的
 
     unsigned short timeout = 1000;
     unsigned char retryNum = 2;
     unsigned long long connectNum = 65535;//最大连接数量
 
-    Trie<CSCP *> connecting;//连接中的cscp
+    Trie<CCP *> connecting;//连接中的cscp
 
     QUdpSocket *ipv4 = nullptr;
     QUdpSocket *ipv6 = nullptr;
     QByteArray udpErrorInfo;
 
-    friend class CSCP;
+    friend class CCP;
 };

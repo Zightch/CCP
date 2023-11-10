@@ -6,7 +6,7 @@
 #define CSCPTEST_SHOWMSG_H
 
 #include <QWidget>
-#include "CSCP/CSCP.h"
+#include "CCP/CCP.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class ShowMsg; }
@@ -16,14 +16,14 @@ class ShowMsg : public QWidget {
 Q_OBJECT
 
 public:
-    explicit ShowMsg(CSCP *cscp, QWidget *parent = nullptr);
+    explicit ShowMsg(CCP *ccp, QWidget *parent = nullptr);
 
     ~ShowMsg() override;
 
-    CSCP *getCSCP();
+    CCP *getCSCP();
 private:
     Ui::ShowMsg *ui;
-    CSCP *cscp = nullptr;
+    CCP *ccp = nullptr;
     void recv();
     void send();
 };

@@ -4,7 +4,7 @@
 #include <QHostAddress>
 #include <QException>
 
-class CSCPManager;
+class CCPManager;
 
 class CSCPDP {//纯数据
 public:
@@ -28,13 +28,13 @@ public:
 };
 
 //CSCP协议对象类(实现)
-class CSCP : public QObject {
+class CCP : public QObject {
 Q_OBJECT
 
 public:
-    explicit CSCP(QObject *, const QHostAddress &, unsigned short);
+    explicit CCP(QObject *, const QHostAddress &, unsigned short);
 
-    ~CSCP() override;
+    ~CCP() override;
 
     void close(const QByteArray & = "");
 
@@ -84,7 +84,7 @@ private:
 
     void updateWnd_();//更新窗口
 
-    CSCPManager *cm = nullptr;//CSCPManager
+    CCPManager *cm = nullptr;//CCPManager
     char cs = -1;//-1未连接, 0半连接, 1连接成功, 2准备断开连接
     unsigned short ID = 0;//自己的包ID
     unsigned short OID = -1;//对方当前包ID
@@ -101,5 +101,5 @@ private:
     unsigned short port;//远程主机port
     bool initiative = false;//主动性
 
-    friend class CSCPManager;
+    friend class CCPManager;
 };

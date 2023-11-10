@@ -2,25 +2,25 @@
 #define CSCPTEST_H
 
 #include <QWidget>
-#include "CSCP/CSCPManager.h"
+#include "CCP/CCPManager.h"
 #include "ShowMsg/ShowMsg.h"
 #include "NewConnect/NewConnect.h"
 
 QT_BEGIN_NAMESPACE
-namespace Ui { class CSCPTest; }
+namespace Ui { class CCPTest; }
 QT_END_NAMESPACE
 
-class CSCPTest : public QWidget
+class CCPTest : public QWidget
 {
     Q_OBJECT
 
 public:
-    explicit CSCPTest(QWidget *parent = nullptr);
-    ~CSCPTest() override;
+    explicit CCPTest(QWidget *parent = nullptr);
+    ~CCPTest() override;
 
 private:
-    Ui::CSCPTest *ui;
-    CSCPManager *cscpManager = nullptr;
+    Ui::CCPTest *ui{};
+    CCPManager *cscpManager = nullptr;
     NewConnect *newConnect = nullptr;
     void bind();
     void enableOperateBtn();

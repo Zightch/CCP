@@ -1,11 +1,11 @@
-#include "CSCP.h"
-#include "CSCPManager.h"
+#include "CCP.h"
+#include "CCPManager.h"
 #include "tools/Dump.h"
 #include <QDateTime>
 
-CSCP::CSCP(QObject *parent,const QHostAddress&IP, unsigned short p) : QObject(parent), IP(IP),port(p) {
-    cm = ((CSCPManager *) parent);
-    connect(this, &CSCP::procS_, this, &CSCP::procF_, Qt::QueuedConnection);
+CCP::CCP(QObject *parent, const QHostAddress&IP, unsigned short p) : QObject(parent), IP(IP), port(p) {
+    cm = ((CCPManager *) parent);
+    connect(this, &CCP::procS_, this, &CCP::procF_, Qt::QueuedConnection);
     connect(&hbt, &QTimer::timeout, this, [&]() {
         if (cs == 1) {
             auto *cdpt = new CDPT(this);
@@ -17,7 +17,7 @@ CSCP::CSCP(QObject *parent,const QHostAddress&IP, unsigned short p) : QObject(pa
     });
 }
 
-void CSCP::close(const QByteArray &data) {
+void CCP::close(const QByteArray &data) {
     if (cs == 1) {
         auto *cdpt = new CDPT(this);
         cdpt->cdp.cf = 0x24;
@@ -41,7 +41,7 @@ void CSCP::close(const QByteArray &data) {
     hbt.stop();
 }
 
-void CSCP::procF_(QByteArray data) {
+void CCP::procF_(QByteArray data) {
     const char *data_c = data.data();
     unsigned char cf = data_c[0];
 
@@ -154,7 +154,7 @@ void CSCP::procF_(QByteArray data) {
     updateWnd_();
 }
 
-void CSCP::sendNow(const QByteArray &data) {
+void CCP::sendNow(const QByteArray &data) {
     if (cs == 1) {
         auto *tmp = new CDPT(this);
         tmp->cdp.data = data;
@@ -164,7 +164,7 @@ void CSCP::sendNow(const QByteArray &data) {
     }
 }
 
-void CSCP::send(const QByteArray &data) {
+void CCP::send(const QByteArray &data) {
     if (cs == 1) {
         if (data.size() <= dataBlockSize) {
             auto *tmp = new CDPT(this);
@@ -205,23 +205,23 @@ void CSCP::send(const QByteArray &data) {
     }
 }
 
-bool CSCP::hasData() const {
+bool CCP::hasData() const {
     return !readBuf.empty();
 }
 
-QByteArray CSCP::read() {
+QByteArray CCP::read() {
     QByteArray tmp = readBuf.first();
     readBuf.pop_front();
     return tmp;
 }
 
-void CSCP::setDataBlockSize(unsigned short us) {
+void CCP::setDataBlockSize(unsigned short us) {
     if (us >= 65530)
         dataBlockSize = 65530;
     else dataBlockSize = us;
 }
 
-void CSCP::setHBTTime(unsigned short time) {
+void CCP::setHBTTime(unsigned short time) {
     hbtTime = time;
     if (cs == 1) {
         hbt.stop();
@@ -229,15 +229,15 @@ void CSCP::setHBTTime(unsigned short time) {
     }
 }
 
-QHostAddress CSCP::getIP() const {
+QHostAddress CCP::getIP() const {
     return IP;
 }
 
-unsigned short CSCP::getPort() const {
+unsigned short CCP::getPort() const {
     return port;
 }
 
-void CSCP::connect_(const QByteArray &data) {
+void CCP::connect_(const QByteArray &data) {
     if (cs == -1) {
         auto *tmp = new CDPT(this);
         tmp->cdp.SID = 0;
@@ -252,13 +252,13 @@ void CSCP::connect_(const QByteArray &data) {
     }
 }
 
-CSCP::~CSCP() {
+CCP::~CCP() {
     close();
     cm = nullptr;
     readBuf.clear();
 }
 
-void CSCP::sendTimeout_() {
+void CCP::sendTimeout_() {
     auto *cdpt = (CDPT *) sender();
     if (cdpt->retryNum < cm->getRetryNum()) {
         cdpt->retryNum++;
@@ -281,7 +281,7 @@ void CSCP::sendTimeout_() {
     updateWnd_();
 }
 
-void CSCP::sendPackage_(CDPT *cdpt) {
+void CCP::sendPackage_(CDPT *cdpt) {
     Dump d;
     d.push(cdpt->cdp.cf);
     unsigned char cmd = (char) (cdpt->cdp.cf & (char) 0x07);
@@ -296,8 +296,8 @@ void CSCP::sendPackage_(CDPT *cdpt) {
     tmp.append(d.get(), (qsizetype) d.size());
     cm->sendF_(IP, port, tmp);
     if (!NA) {
-        disconnect(cdpt, &CDPT::timeout, this, &CSCP::sendTimeout_);
-        connect(cdpt, &CDPT::timeout, this, &CSCP::sendTimeout_);
+        disconnect(cdpt, &CDPT::timeout, this, &CCP::sendTimeout_);
+        connect(cdpt, &CDPT::timeout, this, &CCP::sendTimeout_);
         cdpt->start(cm->getTimeout());
         sendWnd[cdpt->cdp.SID] = cdpt;
         hbt.stop();
@@ -305,7 +305,7 @@ void CSCP::sendPackage_(CDPT *cdpt) {
         delete cdpt;
 }
 
-void CSCP::NA_ACK(unsigned short AID) {
+void CCP::NA_ACK(unsigned short AID) {
     auto *tmp = new CDPT(this);
     tmp->AID = AID;
     tmp->cdp.cf = (char) 0x22;
@@ -313,7 +313,7 @@ void CSCP::NA_ACK(unsigned short AID) {
     updateWnd_();
 }
 
-void CSCP::updateWnd_() {
+void CCP::updateWnd_() {
     while (sendWnd.contains(ID)) {
         if (!sendWnd[ID]->isActive()) {
             delete sendWnd[ID];

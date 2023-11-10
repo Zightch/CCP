@@ -8,11 +8,11 @@
 #include "ui_ShowMsg.h"
 #include "tools/IPTools.h"
 
-ShowMsg::ShowMsg(CSCP *cscp, QWidget *parent) : QWidget(parent), ui(new Ui::ShowMsg) {
+ShowMsg::ShowMsg(CCP *ccp, QWidget *parent) : QWidget(parent), ui(new Ui::ShowMsg) {
     ui->setupUi(this);
-    this->cscp = cscp;
-    setWindowTitle(IPPort(cscp->getIP(), cscp->getPort()));
-    connect(cscp, &CSCP::readyRead, this, &ShowMsg::recv);
+    this->ccp = ccp;
+    setWindowTitle(IPPort(ccp->getIP(), ccp->getPort()));
+    connect(ccp, &CCP::readyRead, this, &ShowMsg::recv);
     connect(ui->send, &QPushButton::clicked, this, &ShowMsg::send);
 }
 
@@ -20,18 +20,18 @@ ShowMsg::~ShowMsg() {
     delete ui;
 }
 
-CSCP *ShowMsg::getCSCP() {
-    return cscp;
+CCP *ShowMsg::getCSCP() {
+    return ccp;
 }
 
 void ShowMsg::recv() {
-    while(cscp->hasData()) {
-        auto data  = cscp->read();
+    while(ccp->hasData()) {
+        auto data  = ccp->read();
         ui->recvData->appendPlainText(data);
     }
 }
 
 void ShowMsg::send() {
     auto data = ui->sendData->toPlainText().toUtf8();
-    cscp->send(data);
+    ccp->send(data);
 }

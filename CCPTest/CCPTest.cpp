@@ -1,26 +1,26 @@
-#include "CSCPTest.h"
-#include "./ui_CSCPTest.h"
+#include "CCPTest.h"
+#include "./ui_CCPTest.h"
 #include <QMessageBox>
 #include "tools/IPTools.h"
 
-CSCPTest::CSCPTest(QWidget *parent) : QWidget(parent), ui(new Ui::CSCPTest) {
+CCPTest::CCPTest(QWidget *parent) : QWidget(parent), ui(new Ui::CCPTest) {
     ui->setupUi(this);
     newConnect = new NewConnect();
-    connect(ui->bind, &QPushButton::clicked, this, &CSCPTest::bind);
-    connect(ui->connectList, &QListWidget::itemSelectionChanged, this, &CSCPTest::enableOperateBtn);
-    connect(ui->showMsg, &QPushButton::clicked, this, &CSCPTest::showMsg);
-    connect(ui->closeConnect, &QPushButton::clicked, this, &CSCPTest::closeConnect);
+    connect(ui->bind, &QPushButton::clicked, this, &CCPTest::bind);
+    connect(ui->connectList, &QListWidget::itemSelectionChanged, this, &CCPTest::enableOperateBtn);
+    connect(ui->showMsg, &QPushButton::clicked, this, &CCPTest::showMsg);
+    connect(ui->closeConnect, &QPushButton::clicked, this, &CCPTest::closeConnect);
     connect(ui->newConnect, &QPushButton::clicked, newConnect, &NewConnect::show);
-    connect(newConnect, &NewConnect::toConnect, this, &CSCPTest::toConnect);
+    connect(newConnect, &NewConnect::toConnect, this, &CCPTest::toConnect);
 }
 
-CSCPTest::~CSCPTest() {
+CCPTest::~CCPTest() {
     delete cscpManager;
     delete ui;
     delete newConnect;
 }
 
-void CSCPTest::bind() {
+void CCPTest::bind() {
     auto uiCTRL = [this](bool i) {
         ui->localIP->setEnabled(!i);
         ui->localPort->setEnabled(!i);
@@ -28,7 +28,7 @@ void CSCPTest::bind() {
         ui->newConnect->setEnabled(i);
     };
     if (cscpManager == nullptr) {
-        cscpManager = new CSCPManager(this);
+        cscpManager = new CCPManager(this);
         QByteArrayList error;
         auto ipStr = ui->localIP->text().toLocal8Bit();
         if (ipStr.isEmpty())
@@ -38,9 +38,9 @@ void CSCPTest::bind() {
         if (error.isEmpty()) {
             ui->bind->setText("关闭");
             uiCTRL(true);
-            connect(cscpManager, &CSCPManager::connected, this, &CSCPTest::connected);
-            connect(cscpManager, &CSCPManager::connectFail, this, &CSCPTest::connectFail);
-            connect(cscpManager, &CSCPManager::cLog, this, &CSCPTest::appendLog);
+            connect(cscpManager, &CCPManager::connected, this, &CCPTest::connected);
+            connect(cscpManager, &CCPManager::connectFail, this, &CCPTest::connectFail);
+            connect(cscpManager, &CCPManager::cLog, this, &CCPTest::appendLog);
         } else {
             QByteArray tmp;
             for (const auto &i: error)
@@ -63,19 +63,19 @@ void CSCPTest::bind() {
     }
 }
 
-void CSCPTest::closeConnect() {
+void CCPTest::closeConnect() {
     auto item = ui->connectList->currentItem();
     auto client = connectList[item->text()];
     client->getCSCP()->close();
 }
 
-void CSCPTest::enableOperateBtn() {
+void CCPTest::enableOperateBtn() {
     ui->showMsg->setEnabled(true);
     ui->closeConnect->setEnabled(true);
 }
 
-void CSCPTest::connected(void *ptr) {
-    auto cscp = (CSCP *) ptr;
+void CCPTest::connected(void *ptr) {
+    auto cscp = (CCP *) ptr;
     //在客户端列表里添加一个元素(IP:port)
     auto ipPort = IPPort(cscp->getIP(), cscp->getPort());
     if (!connectList.contains(ipPort)) {
@@ -84,7 +84,7 @@ void CSCPTest::connected(void *ptr) {
         auto sm = new ShowMsg(cscp);
         //Map保存所有客户端(ShowMsg)
         connectList.insert(ipPort, sm);
-        connect(cscp, &CSCP::disconnected, this, &CSCPTest::disconnected);
+        connect(cscp, &CCP::disconnected, this, &CCPTest::disconnected);
     }
     {
         QByteArray IP;
@@ -97,13 +97,13 @@ void CSCPTest::connected(void *ptr) {
     }
 }
 
-void CSCPTest::showMsg() {
+void CCPTest::showMsg() {
     auto ipPort = ui->connectList->currentItem()->text();
     connectList[ipPort]->show();
 }
 
-void CSCPTest::disconnected() {
-    auto cscp = (CSCP *) sender();
+void CCPTest::disconnected() {
+    auto cscp = (CCP *) sender();
     auto ipPort = IPPort(cscp->getIP(), cscp->getPort());
     //窗口
     auto client = connectList[ipPort];
@@ -124,16 +124,16 @@ void CSCPTest::disconnected() {
     }
 }
 
-void CSCPTest::appendLog(const QByteArray &data) {
+void CCPTest::appendLog(const QByteArray &data) {
     ui->logger->appendPlainText(data);
 }
 
-void CSCPTest::connectFail(const QHostAddress &IP, unsigned short port, const QByteArray &data) {
+void CCPTest::connectFail(const QHostAddress &IP, unsigned short port, const QByteArray &data) {
     newConnect->restoreUI();
     QMessageBox::information(newConnect, IPPort(IP, port) + " 连接失败", data);
 }
 
-void CSCPTest::toConnect(const QByteArray &IP, unsigned short port) {
+void CCPTest::toConnect(const QByteArray &IP, unsigned short port) {
     if (cscpManager != nullptr)
         cscpManager->createConnection(IP, port);
 }

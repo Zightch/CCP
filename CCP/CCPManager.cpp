@@ -1,15 +1,15 @@
-#include "CSCPManager.h"
+#include "CCPManager.h"
 #include "tools/Dump.h"
 #include "tools/IPTools.h"
 #include <QDateTime>
 #include <QNetworkDatagram>
 #include "tools/hex.h"
 
-CSCPManager::CSCPManager(QObject *parent) : QObject(parent) {
-    connect(this, &CSCPManager::sendS_, this, &CSCPManager::sendF_, Qt::QueuedConnection);
+CCPManager::CCPManager(QObject *parent) : QObject(parent) {
+    connect(this, &CCPManager::sendS_, this, &CCPManager::sendF_, Qt::QueuedConnection);
 }
 
-void CSCPManager::proc_(const QHostAddress &IP, unsigned short port, const QByteArray &data) {
+void CCPManager::proc_(const QHostAddress &IP, unsigned short port, const QByteArray &data) {
     auto ef = [&](const QByteArray &data) {
         Dump error;
         error.push((char) 0x64);
@@ -24,8 +24,8 @@ void CSCPManager::proc_(const QHostAddress &IP, unsigned short port, const QByte
         emit requestInvalid(IP, port);
         return;
     }
-    if (cscp.exist(ipPort)) {
-        emit cscp[ipPort]->procS_(data);
+    if (ccp.exist(ipPort)) {
+        emit ccp[ipPort]->procS_(data);
         return;
     }
     if (connecting.exist(ipPort)) {
@@ -47,7 +47,7 @@ void CSCPManager::proc_(const QHostAddress &IP, unsigned short port, const QByte
         emit requestInvalid(IP, port);
         return;
     }
-    if (cscp.size() >= connectNum) {
+    if (ccp.size() >= connectNum) {
         ef("当前管理器连接的CSCP数量已达到上限");
         emit requestInvalid(IP, port);
         return;
@@ -60,10 +60,10 @@ void CSCPManager::proc_(const QHostAddress &IP, unsigned short port, const QByte
         if (!rid.isEmpty()) emit requestInfo(IP, port, rid, requestOK, requestReply);
     }
     if (requestOK) {
-        auto tmp = new CSCP(this, IP, port);
+        auto tmp = new CCP(this, IP, port);
         connecting[ipPort] = tmp;
-        connect(tmp, &CSCP::connected_, this, &CSCPManager::connected_, Qt::QueuedConnection);
-        connect(tmp, &CSCP::disconnected, this, &CSCPManager::requestInvalid_, Qt::QueuedConnection);
+        connect(tmp, &CCP::connected_, this, &CCPManager::connected_, Qt::QueuedConnection);
+        connect(tmp, &CCP::disconnected, this, &CCPManager::requestInvalid_, Qt::QueuedConnection);
         emit tmp->procS_(data);
     } else {
         ef(requestReply);
@@ -71,15 +71,15 @@ void CSCPManager::proc_(const QHostAddress &IP, unsigned short port, const QByte
     }
 }
 
-void CSCPManager::setTimeout(unsigned short t) {
+void CCPManager::setTimeout(unsigned short t) {
     timeout = t;
 }
 
-CSCPManager::~CSCPManager() {
+CCPManager::~CCPManager() {
     close();
 }
 
-QByteArrayList CSCPManager::bind(unsigned short port) {
+QByteArrayList CCPManager::bind(unsigned short port) {
     QByteArrayList tmp;
     auto tmp4 = bind("0.0.0.0", port);
     if (!tmp4.isEmpty())
@@ -90,7 +90,7 @@ QByteArrayList CSCPManager::bind(unsigned short port) {
     return tmp;
 }
 
-QByteArray CSCPManager::bind(const QByteArray &IP, unsigned short port) {
+QByteArray CCPManager::bind(const QByteArray &IP, unsigned short port) {
     QHostAddress ip(IP);
     QUdpSocket **udpTmp;
     char ipProtocol = 0;
@@ -114,10 +114,10 @@ QByteArray CSCPManager::bind(const QByteArray &IP, unsigned short port) {
             udpErrorInfo = "";
             switch (ipProtocol) {
                 case 1:
-                    connect(udp, &QUdpSocket::readyRead, this, &CSCPManager::recvIPv4_);
+                    connect(udp, &QUdpSocket::readyRead, this, &CCPManager::recvIPv4_);
                     break;
                 case 2:
-                    connect(udp, &QUdpSocket::readyRead, this, &CSCPManager::recvIPv6_);
+                    connect(udp, &QUdpSocket::readyRead, this, &CCPManager::recvIPv6_);
                     break;
             }
         } else {
@@ -130,19 +130,19 @@ QByteArray CSCPManager::bind(const QByteArray &IP, unsigned short port) {
     return udpErrorInfo;
 }
 
-void CSCPManager::setConnectNum(unsigned long long cn) {
+void CCPManager::setConnectNum(unsigned long long cn) {
     connectNum = cn;
 }
 
-unsigned short CSCPManager::getConnectNum() const {
+unsigned short CCPManager::getConnectNum() const {
     return connectNum;
 }
 
-void CSCPManager::setRetryNum(unsigned char r) {
+void CCPManager::setRetryNum(unsigned char r) {
     retryNum = r;
 }
 
-void CSCPManager::sendF_(const QHostAddress& IP, unsigned short port, const QByteArray& data) {
+void CCPManager::sendF_(const QHostAddress& IP, unsigned short port, const QByteArray& data) {
     switch (IP.protocol()) {
         case QAbstractSocket::IPv4Protocol:
             if (ipv4 != nullptr) {
@@ -161,8 +161,8 @@ void CSCPManager::sendF_(const QHostAddress& IP, unsigned short port, const QByt
     }
 }
 
-void CSCPManager::connectFail_(const QByteArray& data) {
-    CSCP *c = (CSCP *) sender();
+void CCPManager::connectFail_(const QByteArray& data) {
+    CCP *c = (CCP *) sender();
     QHostAddress IP = c->IP;
     unsigned short port = c->port;
     connecting.remove(IPPort(IP, port));
@@ -170,15 +170,15 @@ void CSCPManager::connectFail_(const QByteArray& data) {
     emit connectFail(IP, port, data);
 }
 
-void CSCPManager::connected_() {
-    CSCP *c = (CSCP *) sender();
+void CCPManager::connected_() {
+    CCP *c = (CCP *) sender();
     QByteArray key = IPPort(c->IP, c->port);
     connecting.remove(key);
-    if (cscp.size() < connectNum) {
-        disconnect(c, &CSCP::disconnected, nullptr, nullptr);
-        connect(c, &CSCP::disconnected, this, &CSCPManager::rmCSCP_);
-        connect(c, &CSCP::disconnected, this, &CSCPManager::deleteCSCP_, Qt::QueuedConnection);
-        cscp[key] = c;
+    if (ccp.size() < connectNum) {
+        disconnect(c, &CCP::disconnected, nullptr, nullptr);
+        connect(c, &CCP::disconnected, this, &CCPManager::rmCSCP_);
+        connect(c, &CCP::disconnected, this, &CCPManager::deleteCSCP_, Qt::QueuedConnection);
+        ccp[key] = c;
         emit connected(c);
     } else {
         c->close("当前连接的CSCP数量已达到上限");
@@ -190,31 +190,31 @@ void CSCPManager::connected_() {
     }
 }
 
-void CSCPManager::deleteCSCP_() {
-    delete ((CSCP *) sender());
+void CCPManager::deleteCSCP_() {
+    delete ((CCP *) sender());
 }
 
-void CSCPManager::close() {
-    auto callBack = [this](CSCP *&i, const char *) {
-        disconnect(i, &CSCP::disconnected, this, &CSCPManager::rmCSCP_);
-        disconnect(i, &CSCP::disconnected, this, &CSCPManager::deleteCSCP_);
-        disconnect(i, &CSCP::disconnected, this, &CSCPManager::connectFail_);
-        disconnect(i, &CSCP::disconnected, this, &CSCPManager::requestInvalid_);
+void CCPManager::close() {
+    auto callBack = [this](CCP *&i, const char *) {
+        disconnect(i, &CCP::disconnected, this, &CCPManager::rmCSCP_);
+        disconnect(i, &CCP::disconnected, this, &CCPManager::deleteCSCP_);
+        disconnect(i, &CCP::disconnected, this, &CCPManager::connectFail_);
+        disconnect(i, &CCP::disconnected, this, &CCPManager::requestInvalid_);
         i->close("管理器服务关闭");
         delete i;
         i = nullptr;
     };
     connecting.traverse(callBack);
     connecting.clear();
-    cscp.traverse(callBack);
-    cscp.clear();
+    ccp.traverse(callBack);
+    ccp.clear();
     delete ipv4;
     ipv4 = nullptr;
     delete ipv6;
     ipv6 = nullptr;
 }
 
-int CSCPManager::isBind() {
+int CCPManager::isBind() {
     int tmp = 0;
     if (ipv4 != nullptr)
         tmp++;
@@ -223,7 +223,7 @@ int CSCPManager::isBind() {
     return tmp;
 }
 
-void CSCPManager::createConnection(const QByteArray &IP, unsigned short port, const QByteArray &data) {
+void CCPManager::createConnection(const QByteArray &IP, unsigned short port, const QByteArray &data) {
     QHostAddress ip(IP);
     {
         QUdpSocket **udpTmp;
@@ -250,58 +250,58 @@ void CSCPManager::createConnection(const QByteArray &IP, unsigned short port, co
             return;
         }
     }
-    if ((cscp.size() >= connectNum)) {
+    if ((ccp.size() >= connectNum)) {
         emit connectFail(ip, port, "当前管理器连接的CSCP数量已达到上限");
         return;
     }
     auto ipTmp = IPPort(QHostAddress(IP), port);
-    if (cscp.exist(ipTmp)) {
-        emit connected(cscp[ipTmp]);
+    if (ccp.exist(ipTmp)) {
+        emit connected(ccp[ipTmp]);
         return;
     }
     if (!connecting.exist(ipTmp)) {
-        auto tmp = new CSCP(this, QHostAddress(IP), port);
+        auto tmp = new CCP(this, QHostAddress(IP), port);
         connecting[ipTmp] = tmp;
-        connect(tmp, &CSCP::connected_, this, &CSCPManager::connected_, Qt::QueuedConnection);
-        connect(tmp, &CSCP::disconnected, this, &CSCPManager::connectFail_, Qt::QueuedConnection);
+        connect(tmp, &CCP::connected_, this, &CCPManager::connected_, Qt::QueuedConnection);
+        connect(tmp, &CCP::disconnected, this, &CCPManager::connectFail_, Qt::QueuedConnection);
         tmp->initiative = true;
         tmp->connect_(data);
     }
 }
 
-unsigned short CSCPManager::getTimeout() const {
+unsigned short CCPManager::getTimeout() const {
     return timeout;
 }
 
-unsigned char CSCPManager::getRetryNum() const {
+unsigned char CCPManager::getRetryNum() const {
     return retryNum;
 }
 
-unsigned int CSCPManager::getTotalDelay() const {
+unsigned int CCPManager::getTotalDelay() const {
     return timeout * (retryNum + 1);
 }
 
-QByteArray CSCPManager::udpError() const {
+QByteArray CCPManager::udpError() const {
     return udpErrorInfo;
 }
 
-void CSCPManager::rmCSCP_() {
-    auto c = (CSCP *) sender();
+void CCPManager::rmCSCP_() {
+    auto c = (CCP *) sender();
     if (c != nullptr) {
         auto ipPort = IPPort(c->IP, c->port);
-        cscp.remove(ipPort);
+        ccp.remove(ipPort);
         connecting.remove(ipPort);
     }
 }
 
-void CSCPManager::requestInvalid_(const QByteArray&) {
-    auto c = (CSCP *) sender();
-    cscp.remove(IPPort(c->IP, c->port));
+void CCPManager::requestInvalid_(const QByteArray&) {
+    auto c = (CCP *) sender();
+    ccp.remove(IPPort(c->IP, c->port));
     emit requestInvalid(c->IP, c->port);
     delete c;
 }
 
-void CSCPManager::recvIPv4_() {
+void CCPManager::recvIPv4_() {
     while (ipv4->hasPendingDatagrams()) {
         auto datagrams = ipv4->receiveDatagram();
         auto IP = datagrams.senderAddress();
@@ -314,7 +314,7 @@ void CSCPManager::recvIPv4_() {
     }
 }
 
-void CSCPManager::recvIPv6_() {
+void CCPManager::recvIPv6_() {
     while (ipv6->hasPendingDatagrams()) {
         auto datagrams = ipv6->receiveDatagram();
         auto IP = datagrams.senderAddress();
