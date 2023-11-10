@@ -6,15 +6,15 @@
 
 class CCPManager;
 
-class CSCPDP {//纯数据
+class CCPDP {//纯数据
 public:
     unsigned char cf = 0;//属性和命令
     unsigned short SID = 0;//本包ID
     QByteArray data = "";//用户数据
 };
 
-//CSCP数据包+定时器(定义)
-class CDPT : public QTimer {
+//CCP数据包+定时器(定义)
+class CDPT : public QTimer, public CCPDP {
 Q_OBJECT
 
 public:
@@ -24,10 +24,9 @@ public:
 
     unsigned char retryNum = 0;//重发次数
     unsigned short AID = 0;//应答包ID
-    CSCPDP cdp;//数据包
 };
 
-//CSCP协议对象类(实现)
+//CCP协议对象类(实现)
 class CCP : public QObject {
 Q_OBJECT
 
@@ -89,7 +88,7 @@ private:
     unsigned short ID = 0;//自己的包ID
     unsigned short OID = -1;//对方当前包ID
     QMap<unsigned short, CDPT *> sendWnd;//发送窗口
-    QMap<unsigned short, CSCPDP> recvWnd;//接收窗口
+    QMap<unsigned short, CCPDP> recvWnd;//接收窗口
     QList<CDPT *> sendBuf;//发送缓存
     QByteArrayList readBuf;//可读缓冲区
     bool link = false;

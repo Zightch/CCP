@@ -15,7 +15,7 @@ CCPTest::CCPTest(QWidget *parent) : QWidget(parent), ui(new Ui::CCPTest) {
 }
 
 CCPTest::~CCPTest() {
-    delete cscpManager;
+    delete ccpManager;
     delete ui;
     delete newConnect;
 }
@@ -27,31 +27,31 @@ void CCPTest::bind() {
         ui->connectList->setEnabled(i);
         ui->newConnect->setEnabled(i);
     };
-    if (cscpManager == nullptr) {
-        cscpManager = new CCPManager(this);
+    if (ccpManager == nullptr) {
+        ccpManager = new CCPManager(this);
         QByteArrayList error;
         auto ipStr = ui->localIP->text().toLocal8Bit();
         if (ipStr.isEmpty())
-            error = cscpManager->bind(ui->localPort->value());
+            error = ccpManager->bind(ui->localPort->value());
         else
-            error.append(cscpManager->bind(ipStr, ui->localPort->value()));
+            error.append(ccpManager->bind(ipStr, ui->localPort->value()));
         if (error.isEmpty()) {
             ui->bind->setText("关闭");
             uiCTRL(true);
-            connect(cscpManager, &CCPManager::connected, this, &CCPTest::connected);
-            connect(cscpManager, &CCPManager::connectFail, this, &CCPTest::connectFail);
-            connect(cscpManager, &CCPManager::cLog, this, &CCPTest::appendLog);
+            connect(ccpManager, &CCPManager::connected, this, &CCPTest::connected);
+            connect(ccpManager, &CCPManager::connectFail, this, &CCPTest::connectFail);
+            connect(ccpManager, &CCPManager::cLog, this, &CCPTest::appendLog);
         } else {
             QByteArray tmp;
             for (const auto &i: error)
                 tmp += (i + "\n");
             QMessageBox::information(this, "绑定失败", tmp);
-            delete cscpManager;
-            cscpManager = nullptr;
+            delete ccpManager;
+            ccpManager = nullptr;
         }
     } else {
-        delete cscpManager;
-        cscpManager = nullptr;
+        delete ccpManager;
+        ccpManager = nullptr;
         ui->connectList->clear();
         for (auto i: connectList)
             delete i;
@@ -66,7 +66,7 @@ void CCPTest::bind() {
 void CCPTest::closeConnect() {
     auto item = ui->connectList->currentItem();
     auto client = connectList[item->text()];
-    client->getCSCP()->close();
+    client->getCCP()->close();
 }
 
 void CCPTest::enableOperateBtn() {
@@ -75,16 +75,16 @@ void CCPTest::enableOperateBtn() {
 }
 
 void CCPTest::connected(void *ptr) {
-    auto cscp = (CCP *) ptr;
+    auto ccp = (CCP *) ptr;
     //在客户端列表里添加一个元素(IP:port)
-    auto ipPort = IPPort(cscp->getIP(), cscp->getPort());
+    auto ipPort = IPPort(ccp->getIP(), ccp->getPort());
     if (!connectList.contains(ipPort)) {
         ui->connectList->addItem(ipPort);
         //去构造一个ShowMsg窗口, 以备显示
-        auto sm = new ShowMsg(cscp);
+        auto sm = new ShowMsg(ccp);
         //Map保存所有客户端(ShowMsg)
         connectList.insert(ipPort, sm);
-        connect(cscp, &CCP::disconnected, this, &CCPTest::disconnected);
+        connect(ccp, &CCP::disconnected, this, &CCPTest::disconnected);
     }
     {
         QByteArray IP;
@@ -103,8 +103,8 @@ void CCPTest::showMsg() {
 }
 
 void CCPTest::disconnected() {
-    auto cscp = (CCP *) sender();
-    auto ipPort = IPPort(cscp->getIP(), cscp->getPort());
+    auto ccp = (CCP *) sender();
+    auto ipPort = IPPort(ccp->getIP(), ccp->getPort());
     //窗口
     auto client = connectList[ipPort];
     delete client;
@@ -134,6 +134,6 @@ void CCPTest::connectFail(const QHostAddress &IP, unsigned short port, const QBy
 }
 
 void CCPTest::toConnect(const QByteArray &IP, unsigned short port) {
-    if (cscpManager != nullptr)
-        cscpManager->createConnection(IP, port);
+    if (ccpManager != nullptr)
+        ccpManager->createConnection(IP, port);
 }

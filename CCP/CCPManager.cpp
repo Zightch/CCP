@@ -48,7 +48,7 @@ void CCPManager::proc_(const QHostAddress &IP, unsigned short port, const QByteA
         return;
     }
     if (ccp.size() >= connectNum) {
-        ef("当前管理器连接的CSCP数量已达到上限");
+        ef("当前管理器连接的CCP数量已达到上限");
         emit requestInvalid(IP, port);
         return;
     }
@@ -119,7 +119,7 @@ QByteArray CCPManager::bind(const QByteArray &IP, unsigned short port) {
             udp = nullptr;
         }
     } else
-        udpErrorInfo = "CSCP管理器已绑定";
+        udpErrorInfo = "CCP管理器已绑定";
     return udpErrorInfo;
 }
 
@@ -169,28 +169,28 @@ void CCPManager::connected_() {
     connecting.remove(key);
     if (ccp.size() < connectNum) {
         disconnect(c, &CCP::disconnected, nullptr, nullptr);
-        connect(c, &CCP::disconnected, this, &CCPManager::rmCSCP_);
-        connect(c, &CCP::disconnected, this, &CCPManager::deleteCSCP_, Qt::QueuedConnection);
+        connect(c, &CCP::disconnected, this, &CCPManager::rmCCP_);
+        connect(c, &CCP::disconnected, this, &CCPManager::deleteCCP_, Qt::QueuedConnection);
         ccp[key] = c;
         emit connected(c);
     } else {
-        c->close("当前连接的CSCP数量已达到上限");
+        c->close("当前连接的CCP数量已达到上限");
         if (c->initiative) {//根据主动性触发不同的失败信号到外层
-            emit connectFail(c->IP, c->port, "当前连接的CSCP数量已达到上限");
+            emit connectFail(c->IP, c->port, "当前连接的CCP数量已达到上限");
         } else {
             emit requestInvalid(c->IP, c->port);
         }
     }
 }
 
-void CCPManager::deleteCSCP_() {
+void CCPManager::deleteCCP_() {
     delete ((CCP *) sender());
 }
 
 void CCPManager::close() {
     auto callBack = [this](CCP *&i, const char *) {
-        disconnect(i, &CCP::disconnected, this, &CCPManager::rmCSCP_);
-        disconnect(i, &CCP::disconnected, this, &CCPManager::deleteCSCP_);
+        disconnect(i, &CCP::disconnected, this, &CCPManager::rmCCP_);
+        disconnect(i, &CCP::disconnected, this, &CCPManager::deleteCCP_);
         disconnect(i, &CCP::disconnected, this, &CCPManager::connectFail_);
         disconnect(i, &CCP::disconnected, this, &CCPManager::requestInvalid_);
         i->close("管理器服务关闭");
@@ -239,12 +239,12 @@ void CCPManager::createConnection(const QByteArray &IP, unsigned short port, con
         }
         auto &udp = (*udpTmp);
         if (udp == nullptr) {
-            emit connectFail(ip, port, "以目标IP协议所管理的CSCP管理器未启动");
+            emit connectFail(ip, port, "以目标IP协议所管理的CCP管理器未启动");
             return;
         }
     }
     if ((ccp.size() >= connectNum)) {
-        emit connectFail(ip, port, "当前管理器连接的CSCP数量已达到上限");
+        emit connectFail(ip, port, "当前管理器连接的CCP数量已达到上限");
         return;
     }
     auto ipTmp = IPPort(QHostAddress(IP), port);
@@ -278,7 +278,7 @@ QByteArray CCPManager::udpError() const {
     return udpErrorInfo;
 }
 
-void CCPManager::rmCSCP_() {
+void CCPManager::rmCCP_() {
     auto c = (CCP *) sender();
     if (c != nullptr) {
         auto ipPort = IPPort(c->IP, c->port);

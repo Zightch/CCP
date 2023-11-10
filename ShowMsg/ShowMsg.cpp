@@ -20,7 +20,7 @@ ShowMsg::~ShowMsg() {
     delete ui;
 }
 
-CCP *ShowMsg::getCSCP() {
+CCP *ShowMsg::getCCP() {
     return ccp;
 }
 

@@ -9,8 +9,8 @@ CCP::CCP(QObject *parent, const QHostAddress&IP, unsigned short p) : QObject(par
     connect(&hbt, &QTimer::timeout, this, [&]() {
         if (cs == 1) {
             auto *cdpt = new CDPT(this);
-            cdpt->cdp.cf = 0x05;
-            cdpt->cdp.SID = ID;
+            cdpt->cf = 0x05;
+            cdpt->SID = ID;
             sendBuf.append(cdpt);
             updateWnd_();
         }
@@ -20,11 +20,11 @@ CCP::CCP(QObject *parent, const QHostAddress&IP, unsigned short p) : QObject(par
 void CCP::close(const QByteArray &data) {
     if (cs == 1) {
         auto *cdpt = new CDPT(this);
-        cdpt->cdp.cf = 0x24;
-        cdpt->cdp.SID = ID;
+        cdpt->cf = 0x24;
+        cdpt->SID = ID;
         if (!data.isEmpty()) {
-            cdpt->cdp.cf |= 0x40;
-            cdpt->cdp.data = data;
+            cdpt->cf |= 0x40;
+            cdpt->data = data;
         }
         sendPackage_(cdpt);
         cs = -1;
@@ -56,9 +56,9 @@ void CCP::procF_(QByteArray data) {
             switch (cmd) {
                 case 1: {
                     auto *tmp = new CDPT(this);
-                    tmp->cdp.SID = 0;
+                    tmp->SID = 0;
                     tmp->AID = 0;
-                    tmp->cdp.cf = (char) 0x03;
+                    tmp->cf = (char) 0x03;
                     sendBuf.append(tmp);
                     if (cs == -1) {
                         OID = 0;
@@ -157,8 +157,8 @@ void CCP::procF_(QByteArray data) {
 void CCP::sendNow(const QByteArray &data) {
     if (cs == 1) {
         auto *tmp = new CDPT(this);
-        tmp->cdp.data = data;
-        tmp->cdp.cf = 0x60;
+        tmp->data = data;
+        tmp->cf = 0x60;
         sendBuf.append(tmp);
         updateWnd_();
     }
@@ -168,9 +168,9 @@ void CCP::send(const QByteArray &data) {
     if (cs == 1) {
         if (data.size() <= dataBlockSize) {
             auto *tmp = new CDPT(this);
-            tmp->cdp.data = data;
-            tmp->cdp.cf = 0x40;
-            tmp->cdp.SID = ID;
+            tmp->data = data;
+            tmp->cf = 0x40;
+            tmp->SID = ID;
             sendBuf.append(tmp);
         } else {
             QByteArrayList dataBlock;
@@ -190,12 +190,12 @@ void CCP::send(const QByteArray &data) {
             if (dataBlock.size() <= 65534) {
                 for (auto j = 0; j < dataBlock.size(); j++) {
                     auto *cdpt = new CDPT(this);
-                    cdpt->cdp.data = dataBlock[(qsizetype) j];
-                    cdpt->cdp.SID = ID + j;
+                    cdpt->data = dataBlock[(qsizetype) j];
+                    cdpt->SID = ID + j;
                     if (j != dataBlock.size() - 1)
-                        cdpt->cdp.cf = 0xC0;
+                        cdpt->cf = 0xC0;
                     else
-                        cdpt->cdp.cf = 0x40;
+                        cdpt->cf = 0x40;
                     sendBuf.append(cdpt);
                 }
             } else
@@ -240,11 +240,11 @@ unsigned short CCP::getPort() const {
 void CCP::connect_(const QByteArray &data) {
     if (cs == -1) {
         auto *tmp = new CDPT(this);
-        tmp->cdp.SID = 0;
-        tmp->cdp.cf = (char) 0x01;
+        tmp->SID = 0;
+        tmp->cf = (char) 0x01;
         if (data.size() != 0) {
-            tmp->cdp.cf |= (char) 0x40;
-            tmp->cdp.data = data;
+            tmp->cf |= (char) 0x40;
+            tmp->data = data;
         }
         sendBuf.append(tmp);
         cs = 0;//半连接
@@ -262,8 +262,8 @@ void CCP::sendTimeout_() {
     auto *cdpt = (CDPT *) sender();
     if (cdpt->retryNum < cm->getRetryNum()) {
         cdpt->retryNum++;
-        cdpt->cdp.cf |= 0x10;
-        sendWnd.remove(cdpt->cdp.SID);
+        cdpt->cf |= 0x10;
+        sendWnd.remove(cdpt->SID);
         sendBuf.append(cdpt);
     } else {
         cs = -1;
@@ -283,15 +283,15 @@ void CCP::sendTimeout_() {
 
 void CCP::sendPackage_(CDPT *cdpt) {
     Dump d;
-    d.push(cdpt->cdp.cf);
-    unsigned char cmd = (char) (cdpt->cdp.cf & (char) 0x07);
-    bool NA = (cdpt->cdp.cf >> 5) & 0x01;
+    d.push(cdpt->cf);
+    unsigned char cmd = (char) (cdpt->cf & (char) 0x07);
+    bool NA = (cdpt->cf >> 5) & 0x01;
     if (!NA)
-        d.push(cdpt->cdp.SID);
+        d.push(cdpt->SID);
     if ((cmd == 2) || (cmd == 3))
         d.push(cdpt->AID);
-    if ((cdpt->cdp.cf >> 6) & 0x01)
-        d.push(cdpt->cdp.data, cdpt->cdp.data.size());
+    if ((cdpt->cf >> 6) & 0x01)
+        d.push(cdpt->data, cdpt->data.size());
     QByteArray tmp;
     tmp.append(d.get(), (qsizetype) d.size());
     cm->sendF_(IP, port, tmp);
@@ -299,7 +299,7 @@ void CCP::sendPackage_(CDPT *cdpt) {
         disconnect(cdpt, &CDPT::timeout, this, &CCP::sendTimeout_);
         connect(cdpt, &CDPT::timeout, this, &CCP::sendTimeout_);
         cdpt->start(cm->getTimeout());
-        sendWnd[cdpt->cdp.SID] = cdpt;
+        sendWnd[cdpt->SID] = cdpt;
         hbt.stop();
     } else
         delete cdpt;
@@ -308,7 +308,7 @@ void CCP::sendPackage_(CDPT *cdpt) {
 void CCP::NA_ACK(unsigned short AID) {
     auto *tmp = new CDPT(this);
     tmp->AID = AID;
-    tmp->cdp.cf = (char) 0x22;
+    tmp->cf = (char) 0x22;
     sendBuf.append(tmp);
     updateWnd_();
 }

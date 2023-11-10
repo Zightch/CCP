@@ -2,8 +2,8 @@
 // Created by Zightch on 2023/11/5.
 //
 
-#ifndef CSCPTEST_SHOWMSG_H
-#define CSCPTEST_SHOWMSG_H
+#ifndef CCPTEST_SHOWMSG_H
+#define CCPTEST_SHOWMSG_H
 
 #include <QWidget>
 #include "CCP/CCP.h"
@@ -20,7 +20,7 @@ public:
 
     ~ShowMsg() override;
 
-    CCP *getCSCP();
+    CCP *getCCP();
 private:
     Ui::ShowMsg *ui;
     CCP *ccp = nullptr;
@@ -29,4 +29,4 @@ private:
 };
 
 
-#endif //CSCPTEST_SHOWMSG_H
+#endif //CCPTEST_SHOWMSG_H

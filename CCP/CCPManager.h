@@ -70,9 +70,9 @@ private:
 
     void connected_();
 
-    void rmCSCP_();
+    void rmCCP_();
 
-    void deleteCSCP_();
+    void deleteCCP_();
 
     void requestInvalid_(const QByteArray&);
 

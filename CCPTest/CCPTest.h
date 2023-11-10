@@ -1,5 +1,5 @@
-#ifndef CSCPTEST_H
-#define CSCPTEST_H
+#ifndef CCPTEST_H
+#define CCPTEST_H
 
 #include <QWidget>
 #include "CCP/CCPManager.h"
@@ -20,7 +20,7 @@ public:
 
 private:
     Ui::CCPTest *ui{};
-    CCPManager *cscpManager = nullptr;
+    CCPManager *ccpManager = nullptr;
     NewConnect *newConnect = nullptr;
     void bind();
     void enableOperateBtn();
@@ -33,4 +33,4 @@ private:
     void toConnect(const QByteArray &, unsigned short);
     QMap<QString, ShowMsg*> connectList;
 };
-#endif // CSCPTEST_H
+#endif // CCPTEST_H
