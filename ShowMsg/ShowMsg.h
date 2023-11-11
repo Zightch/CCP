@@ -16,7 +16,7 @@ class ShowMsg : public QWidget {
 Q_OBJECT
 
 public:
-    explicit ShowMsg(CCP *ccp, QWidget *parent = nullptr);
+    explicit ShowMsg(CCP *, QWidget * = nullptr);
 
     ~ShowMsg() override;
 

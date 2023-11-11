@@ -16,7 +16,7 @@ class NewConnect : public QWidget {
 Q_OBJECT
 
 public:
-    explicit NewConnect(QWidget *parent = nullptr);
+    explicit NewConnect(QWidget * = nullptr);
 
     ~NewConnect() override;
 

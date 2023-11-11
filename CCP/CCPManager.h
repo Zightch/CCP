@@ -84,7 +84,7 @@ private:
     unsigned char retryNum = 2;
     unsigned long long connectNum = 65535;//最大连接数量
 
-    Trie<CCP *> connecting;//连接中的cscp
+    Trie<CCP *> connecting;//连接中的ccp
 
     QUdpSocket *ipv4 = nullptr;
     QUdpSocket *ipv6 = nullptr;

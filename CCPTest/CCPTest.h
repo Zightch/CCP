@@ -15,7 +15,7 @@ class CCPTest : public QWidget
     Q_OBJECT
 
 public:
-    explicit CCPTest(QWidget *parent = nullptr);
+    explicit CCPTest(QWidget * = nullptr);
     ~CCPTest() override;
 
 private:
