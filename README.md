@@ -88,6 +88,13 @@
     <tr>
         <td>S5</td>
         <td>cf</td>
+        <td colspan=2>AID</td>
+        <td colspan=3>data</td>
+        <td>...</td>
+    </tr>
+    <tr>
+        <td>S6</td>
+        <td>cf</td>
         <td colspan=2>SID</td>
         <td colspan=2>AID</td>
         <td>data</td>
@@ -106,7 +113,7 @@
 ### 协议表说明
 * 协议表中前1个字节固定长度: cf
 * 从第2个字节开始为可变数据结构
-* S0 ~ S5 分别对应6种不同的结构体, 如何确定结构体请参见[cf](#cf命令和属性)字段解析
+* S0 ~ S6 分别对应7种不同的结构体, 如何确定结构体请参见[cf](#cf命令和属性)字段解析
 
 ### 含义解析
 * cf命令和属性: 表示当前发送包的命令和属性
