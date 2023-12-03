@@ -30,7 +30,7 @@ set(PROJECT_SOURCES
         CCP/CCPManager.cpp
         tools/Dump.cpp
         tools/hex.cpp
-        tools/IPTools.cpp
+        tools/IP.cpp
         tools/Trie.hpp
         NewConnect/NewConnect.cpp
         NewConnect/NewConnect.ui

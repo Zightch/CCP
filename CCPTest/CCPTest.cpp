@@ -1,7 +1,7 @@
 #include "CCPTest.h"
 #include "./ui_CCPTest.h"
 #include <QMessageBox>
-#include "tools/IPTools.h"
+#include "tools/IP.h"
 
 CCPTest::CCPTest(QWidget *parent) : QWidget(parent), ui(new Ui::CCPTest) {
     ui->setupUi(this);

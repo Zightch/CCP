@@ -5,26 +5,7 @@
 #include <QException>
 
 class CCPManager;
-
-class CCPDP {//纯数据
-public:
-    unsigned char cf = 0;//属性和命令
-    unsigned short SID = 0;//本包ID
-    QByteArray data = "";//用户数据
-};
-
-//CCP数据包+定时器(定义)
-class CDPT : public QTimer, public CCPDP {
-Q_OBJECT
-
-public:
-    explicit CDPT(QObject *);
-
-    ~CDPT() override;
-
-    unsigned char retryNum = 0;//重发次数
-    unsigned short AID = 0;//应答包ID
-};
+class CDPT;
 
 //CCP协议对象类(实现)
 class CCP : public QObject {
@@ -59,21 +40,21 @@ public:
 public:
 signals:
 
-    void disconnected(QByteArray = "");
+    void disconnected(const QByteArray & = "");
 
     void readyRead();
 
 private:
 signals:
 
-    void procS_(QByteArray);
+    void procS_(const QByteArray &);
 
     void connected_();
 
 private:
     void connect_(const QByteArray & = "");
 
-    void procF_(QByteArray);
+    void procF_(const QByteArray &);
 
     void sendTimeout_();
 
@@ -82,6 +63,14 @@ private:
     void NA_ACK(unsigned short AID);//应答
 
     void updateWnd_();//更新窗口
+
+    qsizetype validSlotsNum_();
+
+    struct CCPDP {//纯数据
+        unsigned char cf = 0;//属性和命令
+        unsigned short SID = 0;//本包ID
+        QByteArray data = "";//用户数据
+    };
 
     CCPManager *cm = nullptr;//CCPManager
     char cs = -1;//-1未连接, 0半连接, 1连接成功, 2准备断开连接
@@ -101,4 +90,19 @@ private:
     bool initiative = false;//主动性
 
     friend class CCPManager;
+
+    friend class CDPT;
+};
+
+//CCP数据包+定时器(定义)
+class CDPT : public QTimer, public CCP::CCPDP {
+Q_OBJECT
+
+public:
+    explicit CDPT(QObject *);
+
+    ~CDPT() override;
+
+    unsigned char retryNum = 0;//重发次数
+    unsigned short AID = 0;//应答包ID
 };

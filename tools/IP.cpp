@@ -1,4 +1,4 @@
-#include "IPTools.h"
+#include "IP.h"
 #include <QMutexLocker>
 #include <QRegularExpression>
 #include <QHostAddress>

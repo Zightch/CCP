@@ -10,7 +10,7 @@ CCP::CCP(QObject *parent, const QHostAddress&IP, unsigned short p) : QObject(par
         if (cs == 1) {
             auto *cdpt = new CDPT(this);
             cdpt->cf = 0x05;
-            cdpt->SID = ID;
+            cdpt->SID = ID + validSlotsNum_();
             sendBuf.append(cdpt);
             updateWnd_();
         }
@@ -28,31 +28,27 @@ void CCP::close(const QByteArray &data) {
         }
         sendPackage_(cdpt);
         cs = -1;
-        emit disconnected(data);
     }
     readBuf.append(data);
-    for (auto i: sendWnd)
-        delete i;
-    for (auto i: sendBuf)
-        delete i;
     sendWnd.clear();
     sendBuf.clear();
     recvWnd.clear();
     hbt.stop();
+    emit disconnected(data);
 }
 
-void CCP::procF_(QByteArray data) {
+void CCP::procF_(const QByteArray &data) {
     const char *data_c = data.data();
     unsigned char cf = data_c[0];
 
-    //bool UDL = ((cf >> 7) & 0x01);
+    bool UDL = ((cf >> 7) & 0x01);
     bool UD = ((cf >> 6) & 0x01);
     bool NA = ((cf >> 5) & 0x01);
     bool RT = ((cf >> 4) & 0x01);
     auto cmd = (unsigned char) (cf & (unsigned char) 0x07);
 
     if (!(NA && RT)) {
-        if (1 <= cmd && cmd <= 5) {
+        if (1 <= cmd && cmd <= 5 && !UDL) {
             switch (cmd) {
                 case 1: {
                     auto *tmp = new CDPT(this);
@@ -104,10 +100,6 @@ void CCP::procF_(QByteArray data) {
                             userData.append(data_c + 1, data.size() - 1);
                         cs = -1;
                         readBuf.append(userData);
-                        for (auto i: sendWnd)
-                            delete i;
-                        for (auto i: sendBuf)
-                            delete i;
                         sendWnd.clear();
                         sendBuf.clear();
                         recvWnd.clear();
@@ -170,7 +162,7 @@ void CCP::send(const QByteArray &data) {
             auto *tmp = new CDPT(this);
             tmp->data = data;
             tmp->cf = 0x40;
-            tmp->SID = ID;
+            tmp->SID = ID + validSlotsNum_();
             sendBuf.append(tmp);
         } else {
             QByteArrayList dataBlock;
@@ -188,10 +180,11 @@ void CCP::send(const QByteArray &data) {
                 tmp.clear();
             }
             if (dataBlock.size() <= 65534) {
+                auto baseID = validSlotsNum_();
                 for (auto j = 0; j < dataBlock.size(); j++) {
                     auto *cdpt = new CDPT(this);
                     cdpt->data = dataBlock[(qsizetype) j];
-                    cdpt->SID = ID + j;
+                    cdpt->SID = ID + j + baseID;
                     if (j != dataBlock.size() - 1)
                         cdpt->cf = 0xC0;
                     else
@@ -268,10 +261,6 @@ void CCP::sendTimeout_() {
     } else {
         cs = -1;
         readBuf.append("对方应答超时");
-        for (auto i: sendWnd)
-            delete i;
-        for (auto i: sendBuf)
-            delete i;
         sendBuf.clear();
         sendWnd.clear();
         recvWnd.clear();
@@ -357,6 +346,15 @@ void CCP::updateWnd_() {
         OID++;
     }
     if (isRead) emit readyRead();
+}
+
+qsizetype CCP::validSlotsNum_() {
+    qsizetype num = 0;
+    for (const auto &i: sendWnd)
+        if (!((i->cf >> 5) & 0x01))num++;
+    for (const auto &i: sendBuf)
+        if (!((i->cf >> 5) & 0x01))num++;
+    return num;
 }
 
 CDPT::CDPT(QObject *parent) : QTimer(parent){

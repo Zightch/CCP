@@ -1,6 +1,6 @@
 #include "CCPManager.h"
 #include "tools/Dump.h"
-#include "tools/IPTools.h"
+#include "tools/IP.h"
 #include <QDateTime>
 #include <QNetworkDatagram>
 #include "tools/hex.h"

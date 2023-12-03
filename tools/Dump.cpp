@@ -90,3 +90,11 @@ Dump& Dump::push(const char *cc) {
 unsigned long long Dump::size() const {
     return size_;
 }
+
+Dump &Dump::clear() {
+    delete buff;
+    buff = new char[1];
+    buff[0] = 0;
+    size_ = 0;
+    return *this;
+}

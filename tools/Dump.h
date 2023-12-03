@@ -34,6 +34,8 @@ public:
 
     Dump &push(const char *);
 
+    Dump &clear();
+
     [[nodiscard]]
     char *get() const;
 
