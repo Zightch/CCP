@@ -16,25 +16,12 @@ public:
 
     QByteArray bind(const QByteArray &, unsigned short);
 
-    void setTimeout(unsigned short);
-
-    void setRetryNum(unsigned char);
-
-    void setConnectNum(unsigned long long);
+    void setMaxConnectNum(unsigned long long);
 
     [[nodiscard]]
-    unsigned short getConnectNum() const;
+    unsigned long long getConnectNum();
 
     void createConnection(const QByteArray &, unsigned short, const QByteArray & = "");
-
-    [[nodiscard]]
-    unsigned short getTimeout() const;
-
-    [[nodiscard]]
-    unsigned char getRetryNum() const;
-
-    [[nodiscard]]
-    unsigned int getTotalDelay() const;
 
     void close();
 
@@ -64,9 +51,9 @@ signals:
 private:
     void proc_(const QHostAddress &, unsigned short, const QByteArray &);
 
-    void sendF_(const QHostAddress&, unsigned short, const QByteArray&);
+    void sendF_(const QHostAddress &, unsigned short, const QByteArray &);
 
-    void connectFail_(const QByteArray&);
+    void connectFail_(const QByteArray &);
 
     void connected_();
 
@@ -74,18 +61,13 @@ private:
 
     void deleteCCP_();
 
-    void requestInvalid_(const QByteArray&);
+    void requestInvalid_(const QByteArray &);
 
     void recv_();
 
     Trie<CCP *> ccp;//已连接的
-
-    unsigned short timeout = 1000;
-    unsigned char retryNum = 2;
     unsigned long long connectNum = 65535;//最大连接数量
-
     Trie<CCP *> connecting;//连接中的ccp
-
     QUdpSocket *ipv4 = nullptr;
     QUdpSocket *ipv6 = nullptr;
     QByteArray udpErrorInfo;

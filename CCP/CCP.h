@@ -29,6 +29,10 @@ public:
 
     void setDataBlockSize(unsigned short);
 
+    void setTimeout(unsigned short);
+
+    void setRetryNum(unsigned char);
+
     void setHBTTime(unsigned short);
 
     [[nodiscard]]
@@ -88,6 +92,8 @@ private:
     QHostAddress IP;//远程主机IP
     unsigned short port;//远程主机port
     bool initiative = false;//主动性
+    unsigned short timeout = 1000;
+    unsigned char retryNum = 2;
 
     friend class CCPManager;
 

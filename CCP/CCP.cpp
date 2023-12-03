@@ -253,7 +253,7 @@ CCP::~CCP() {
 
 void CCP::sendTimeout_() {
     auto *cdpt = (CDPT *) sender();
-    if (cdpt->retryNum < cm->getRetryNum()) {
+    if (cdpt->retryNum < retryNum) {
         cdpt->retryNum++;
         cdpt->cf |= 0x10;
         sendWnd.remove(cdpt->SID);
@@ -287,7 +287,7 @@ void CCP::sendPackage_(CDPT *cdpt) {
     if (!NA) {
         disconnect(cdpt, &CDPT::timeout, this, &CCP::sendTimeout_);
         connect(cdpt, &CDPT::timeout, this, &CCP::sendTimeout_);
-        cdpt->start(cm->getTimeout());
+        cdpt->start(timeout);
         sendWnd[cdpt->SID] = cdpt;
         hbt.stop();
     } else
@@ -357,8 +357,14 @@ qsizetype CCP::validSlotsNum_() {
     return num;
 }
 
-CDPT::CDPT(QObject *parent) : QTimer(parent){
-
+void CCP::setTimeout(unsigned short num) {
+    timeout = num;
 }
+
+void CCP::setRetryNum(unsigned char num) {
+    retryNum = num;
+}
+
+CDPT::CDPT(QObject *parent) : QTimer(parent) {}
 
 CDPT::~CDPT() = default;

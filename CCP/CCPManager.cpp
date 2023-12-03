@@ -71,10 +71,6 @@ void CCPManager::proc_(const QHostAddress &IP, unsigned short port, const QByteA
     }
 }
 
-void CCPManager::setTimeout(unsigned short t) {
-    timeout = t;
-}
-
 CCPManager::~CCPManager() {
     close();
 }
@@ -123,16 +119,12 @@ QByteArray CCPManager::bind(const QByteArray &IP, unsigned short port) {
     return udpErrorInfo;
 }
 
-void CCPManager::setConnectNum(unsigned long long cn) {
+void CCPManager::setMaxConnectNum(unsigned long long cn) {
     connectNum = cn;
 }
 
-unsigned short CCPManager::getConnectNum() const {
-    return connectNum;
-}
-
-void CCPManager::setRetryNum(unsigned char r) {
-    retryNum = r;
+unsigned long long CCPManager::getConnectNum() {
+    return ccp.size();
 }
 
 void CCPManager::sendF_(const QHostAddress& IP, unsigned short port, const QByteArray& data) {
@@ -260,18 +252,6 @@ void CCPManager::createConnection(const QByteArray &IP, unsigned short port, con
         tmp->initiative = true;
         tmp->connect_(data);
     }
-}
-
-unsigned short CCPManager::getTimeout() const {
-    return timeout;
-}
-
-unsigned char CCPManager::getRetryNum() const {
-    return retryNum;
-}
-
-unsigned int CCPManager::getTotalDelay() const {
-    return timeout * (retryNum + 1);
 }
 
 QByteArray CCPManager::udpError() const {
