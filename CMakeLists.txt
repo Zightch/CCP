@@ -2,12 +2,6 @@ cmake_minimum_required(VERSION 3.5)
 set(projectName CCPTest)
 project(${projectName} VERSION 0.1 LANGUAGES CXX)
 
-if (WIN32)
-    set(CMAKE_PREFIX_PATH "E:\\Qt\\6.6.0\\mingw_64\\lib\\cmake")
-elseif(UNIX)
-    set(CMAKE_PREFIX_PATH "/opt/Qt/6.6.0/gcc_64/lib/cmake")
-endif ()
-
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
@@ -28,10 +22,7 @@ set(PROJECT_SOURCES
         ShowMsg/ShowMsg.ui
         CCP/CCP.cpp
         CCP/CCPManager.cpp
-        tools/Dump.cpp
-        tools/hex.cpp
-        tools/IP.cpp
-        tools/Trie.hpp
+        tools/tools.cpp
         NewConnect/NewConnect.cpp
         NewConnect/NewConnect.ui
 )

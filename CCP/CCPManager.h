@@ -1,76 +1,73 @@
 #pragma once
-#include <QUdpSocket>
-#include <QMap>
-#include "CCP.h"
-#include "tools/Trie.hpp"
 
-class CCPManager : public QObject {
+#include <QHostAddress>
+#include <QObject>
+#include <QHash>
+
+class CCP;
+class QUdpSocket;
+
+class CCPManager final : public QObject {
 Q_OBJECT
 
 public:
     explicit CCPManager(QObject * = nullptr);
 
-    ~CCPManager() override;
+    QString bind(const QString &, unsigned short); // 绑定
 
-    QByteArrayList bind(unsigned short);
+    QStringList bind(unsigned short); // 绑定
 
-    QByteArray bind(const QByteArray &, unsigned short);
+    void setMaxConnectNum(int); // 设置最大连接数量
 
-    void setMaxConnectNum(unsigned long long);
+    int getMaxConnectNum(); // 获取最大连接数量
 
-    [[nodiscard]]
-    unsigned long long getConnectNum();
+    int getConnectedNum(); // 获取已连接数量
 
-    void createConnection(const QByteArray &, unsigned short, const QByteArray & = "");
+    int isBind(); // 已经绑定, 0表示无绑定, 1表示只绑定了IPv4, 2表示只绑定了IPv6, 3表示IPv4和IPv6都绑定了
 
-    void close();
+    void connectToHost(const QString &, unsigned short);
 
-    int isBind();
+    void connectToHost(const QHostAddress &, unsigned short);
 
-    [[nodiscard]]
-    QByteArray udpError() const;
-
-public:
 signals:
 
-    void connectFail(const QHostAddress &, unsigned short, const QByteArray &);//我方主动连接连接失败
+    void connectFail(const QHostAddress &, unsigned short, const QByteArray &); // 我方主动连接连接失败
 
-    void requestInvalid(const QHostAddress &, unsigned short);//对方请求连接连接无效
+    void connected(CCP *); // 连接成功(包含我方主动与对方请求)
 
-    void connected(void *);//连接成功(包含我方主动与对方请求)
+    void cLog(const QString &);
 
-    void requestInfo(const QHostAddress &, unsigned short, const QByteArray &, bool &, QByteArray &);//如果对方的连接请求包含数据, 需要外层判断数据是否合法
+public slots:
 
-    void cLog(const QByteArray &);
+    void close(); // 这个只是关闭管理器
 
-private:
-signals:
+    void quit(); // delete调用它
+private slots:
 
-    void sendS_(const QHostAddress &, unsigned short, const QByteArray &);
+    void deleteLater();
 
-private:
-    void proc_(const QHostAddress &, unsigned short, const QByteArray &);
-
-    void sendF_(const QHostAddress &, unsigned short, const QByteArray &);
-
-    void connectFail_(const QByteArray &);
-
-    void connected_();
+    void recv_(); // 接收数据
 
     void rmCCP_();
-
-    void deleteCCP_();
-
-    void requestInvalid_(const QByteArray &);
-
-    void recv_();
-
-    Trie<CCP *> ccp;//已连接的
-    unsigned long long connectNum = 65535;//最大连接数量
-    Trie<CCP *> connecting;//连接中的ccp
+private:
+    QHash<QString, CCP *> ccp; // 已连接的
+    int connectNum = 65535; // 最大连接数量
+    QHash<QString, CCP *> connecting; // 连接中的ccp
     QUdpSocket *ipv4 = nullptr;
     QUdpSocket *ipv6 = nullptr;
-    QByteArray udpErrorInfo;
+    bool isBindAll = false; // 判断是否是调用的QStringList bind(unsigned short);函数
+
+    ~CCPManager() override;
+
+    void proc_(const QHostAddress &, unsigned short, const QByteArray &); // 处理来的信息
+
+    void send_(const QHostAddress &, unsigned short, const QByteArray &); // 发送数据
+
+    bool threadCheck_(const QString &); // 线程检查
+
+    void ccpConnected_(CCP *);
+
+    void requestInvalid_(const QByteArray &);
 
     friend class CCP;
 };

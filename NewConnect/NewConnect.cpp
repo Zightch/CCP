@@ -1,9 +1,3 @@
-//
-// Created by Zightch on 2023/11/6.
-//
-
-// You may need to build the project (run Qt uic code generator) to get "ui_NewConnect.h" resolved
-
 #include "NewConnect.h"
 #include "ui_NewConnect.h"
 

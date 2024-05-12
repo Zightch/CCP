@@ -1,43 +1,42 @@
 #include "CCP.h"
 #include "CCPManager.h"
-#include "tools/Dump.h"
 #include <QDateTime>
+#include <QThread>
+#include "tools/tools.h"
 
-CCP::CCP(QObject *parent, const QHostAddress&IP, unsigned short p) : QObject(parent), IP(IP), port(p) {
-    cm = ((CCPManager *) parent);
-    connect(this, &CCP::procS_, this, &CCP::procF_, Qt::QueuedConnection);
+#define THREAD_CHECK(ret) if (!threadCheck_(__FUNCTION__))return ret
+
+CCP::CCP(CCPManager *parent, const QHostAddress &IP, unsigned short p) : QObject(parent), IP(IP), port(p), cm(parent) {
     connect(&hbt, &QTimer::timeout, this, [&]() {
         if (cs == 1) {
             auto *cdpt = new CDPT(this);
             cdpt->cf = 0x05;
-            cdpt->SID = ID + validSlotsNum_();
-            sendBuf.append(cdpt);
+            cdpt->SID = ID + sendWnd.size() + sendBufLv1.size();
+            sendBufLv1.append(cdpt);
             updateWnd_();
         }
     });
 }
 
-void CCP::close(const QByteArray &data) {
-    if (cs == 1) {
-        auto *cdpt = new CDPT(this);
-        cdpt->cf = 0x24;
-        cdpt->SID = ID;
-        if (!data.isEmpty()) {
-            cdpt->cf |= 0x40;
-            cdpt->data = data;
-        }
-        sendPackage_(cdpt);
-        cs = -1;
-    }
-    readBuf.append(data);
-    sendWnd.clear();
-    sendBuf.clear();
-    recvWnd.clear();
-    hbt.stop();
-    emit disconnected(data);
+bool CCP::threadCheck_(const QString &funcName) {
+    if (QThread::currentThread() == thread())return true;
+    qWarning()
+            << "函数" << funcName << "不允许在其他线程调用, 操作被拒绝.\n"
+            << "对象:" << this << ", 调用线程:" << QThread::currentThread() << ", 对象所在线程:" << thread();
+    return false;
 }
 
-void CCP::procF_(const QByteArray &data) {
+QHostAddress CCP::getIP() {
+    THREAD_CHECK(QHostAddress::Null);
+    return IP;
+}
+
+unsigned short CCP::getPort() {
+    THREAD_CHECK(0);
+    return port;
+}
+
+void CCP::proc_(const QByteArray &data) { // 该函数只能被CCPManager调用
     const char *data_c = data.data();
     unsigned char cf = data_c[0];
 
@@ -47,323 +46,248 @@ void CCP::procF_(const QByteArray &data) {
     bool RT = ((cf >> 4) & 0x01);
     auto cmd = (unsigned char) (cf & (unsigned char) 0x07);
 
-    if (!(NA && RT)) {
-        if (1 <= cmd && cmd <= 5 && !UDL) {
-            switch (cmd) {
-                case 1: {
-                    auto *tmp = new CDPT(this);
-                    tmp->SID = 0;
-                    tmp->AID = 0;
-                    tmp->cf = (char) 0x03;
-                    sendBuf.append(tmp);
-                    if (cs == -1) {
-                        OID = 0;
-                        cs = 0;//半连接
-                    }
-                    break;
+    if (NA && RT)return;
+    if (1 <= cmd && cmd <= 5 && !UDL) {
+        if (cmd == 1) { // RC指令, 请求
+            if (!RT) {
+                auto cdpt = newCDPT();
+                cdpt->SID = 0;
+                cdpt->AID = 0;
+                cdpt->cf = (char) 0x03;
+                sendBufLv1.append(cdpt);
+                if (cs == -1) {
+                    OID = 0;
+                    cs = 0;//半连接
                 }
-                case 2: {
-                    if (NA) {
-                        unsigned short AID = (*(unsigned short *) (data_c + 1));
-                        if (sendWnd.count(AID) == 1) {
-                            sendWnd[AID]->stop();
-                            if (AID == 0 && cs == 0) {
-                                cs = 1;
-                                emit connected_();
-                            }
-                        }
-                    }
-                    break;
-                }
-                case 3: {
-                    if (ID == 0 && OID == 65535 && !RT) {
-                        NA_ACK(0);
-                        unsigned short SID = (*(unsigned short *) (data_c + 1));
-                        unsigned short AID = (*(unsigned short *) (data_c + 3));
-                        if (cs == 0 && SID == 0 && AID == 0) {
-                            ID = 1;
-                            OID = 0;
-                            cs = 1;
-                            delete sendWnd[0];
-                            sendWnd.remove(0);
-                            emit connected_();
-                            hbt.start(hbtTime);
-                        }
-                    } else if (RT)
-                        NA_ACK(0);
-                    break;
-                }
-                case 4: {
-                    if (NA) {//紧急断开
-                        QByteArray userData;
-                        if (UD)
-                            userData.append(data_c + 1, data.size() - 1);
-                        cs = -1;
-                        readBuf.append(userData);
-                        sendWnd.clear();
-                        sendBuf.clear();
-                        recvWnd.clear();
-                        hbt.stop();
-                        emit disconnected(userData);
-                    }
-                    break;
-                }
-                case 5: {
-                    if (cs == 1) {
-                        unsigned short SID = (*(unsigned short *) (data_c + 1));
-                        NA_ACK(SID);
-                        if (SID == OID + 1) {
-                            OID = SID;
-                            hbt.stop();
-                            hbt.start(hbtTime);
-                        }
-                    }
-                    break;
-                }
-                default:
-                    break;
             }
-        } else {
-            if (!NA) {//需要回复
+        } else if (cmd == 2) { // ACK指令, 应答
+            if (NA) {
+                unsigned short AID = (*(unsigned short *) (data_c + 1));
+                if (sendWnd.count(AID) == 1) {
+                    sendWnd[AID]->stop();
+                    if (AID == 0 && cs == 0) {
+                        cs = 1;
+                        cm->ccpConnected_(this);
+                    }
+                }
+            }
+        } else if (cmd == 3) { // RC ACK指令, 请求应答
+            if (ID == 0 && OID == 65535 && !RT) {
+                NA_ACK(0);
+                unsigned short SID = (*(unsigned short *) (data_c + 1));
+                unsigned short AID = (*(unsigned short *) (data_c + 3));
+                if (cs == 0 && SID == 0 && AID == 0) {
+                    ID = 1;
+                    OID = 0;
+                    cs = 1;
+                    delete sendWnd[0];
+                    sendWnd.remove(0);
+                    cm->ccpConnected_(this);
+                    hbt.start(hbtTime);
+                }
+            } else if (RT)NA_ACK(0);
+        } else if (cmd == 4) { // C指令, 断开
+            if (NA) { // NA必须有
+                QByteArray userData;
+                if (UD)userData = data.mid(1);
+                close(userData);
+            }
+        } else if (cmd == 5) { // H命令, 心跳
+            if (cs == 1) {
                 unsigned short SID = (*(unsigned short *) (data_c + 1));
                 NA_ACK(SID);
-                if (UD) {//有用户数据
-                    //创建一个字节数组来存储用户数据
-                    QByteArray userData;
-                    //从数据包中提取用户数据，跳过前三个字节的头部信息
-                    userData.append(data_c + 3, data.size() - 3);
-                    //如果是重发包，并且接收窗口中已经有该数据，则不需要再次存储
-                    if (!RT || !recvWnd.contains(SID)) (recvWnd[SID] = {cf, SID, userData});
+                if (SID == OID + 1) {
+                    OID = SID;
+                    hbt.stop();
+                    hbt.start(hbtTime);
                 }
-            } else if (UD) {//有用户数据
-                QByteArray userData;
-                userData.append(data_c + 1, data.size() - 1);
-                readBuf.append(userData);
-                emit readyRead();
             }
         }
+    } else {
+        if (!NA) {//需要回复
+            unsigned short SID = (*(unsigned short *) (data_c + 1));
+            NA_ACK(SID);
+            if (UD) { // 有用户数据
+                if (recvWnd.contains(SID) && !RT)close("窗口数据发生重叠"); // 如果窗口包含该数据而且不是重发包
+                else if (!RT || !recvWnd.contains(SID)) { //如果是重发包，并且接收窗口中已经有该数据，则不需要再次存储
+                    // 从数据包中提取用户数据，跳过前三个字节的头部信息
+                    recvWnd[SID] = {cf, SID, data.mid(3)};
+                }
+            }
+        } else if (UD) {//有用户数据
+            readBuf.append(data.mid(1));
+            emit readyRead();
+        }
     }
+    updateWnd_();
+}
+
+void CCP::send(const QByteArray &data) {
+    THREAD_CHECK();
+    if (cs != 1 || data.isEmpty())return;
+    sendBufLv2.append(data);
     updateWnd_();
 }
 
 void CCP::sendNow(const QByteArray &data) {
-    if (cs == 1) {
-        auto *tmp = new CDPT(this);
-        tmp->data = data;
-        tmp->cf = 0x60;
-        sendBuf.append(tmp);
-        updateWnd_();
-    }
+    THREAD_CHECK();
+    if (cs != 1 || data.isEmpty())return;
+    auto *tmp = new CDPT(this);
+    tmp->data = data;
+    tmp->cf = 0x60;
+    sendPackage_(tmp);
+    delete tmp;
 }
 
-void CCP::send(const QByteArray &data) {
-    if (cs == 1) {
-        if (data.size() <= dataBlockSize) {
-            auto *tmp = new CDPT(this);
-            tmp->data = data;
-            tmp->cf = 0x40;
-            tmp->SID = ID + validSlotsNum_();
-            sendBuf.append(tmp);
-        } else {
-            QByteArrayList dataBlock;
-            QByteArray i = data, tmp;
-            while (!i.isEmpty()) {
-                unsigned short dbs = dataBlockSize;
-                if (i.size() <= dataBlockSize)
-                    dbs = i.size();
-                tmp.append(i, dbs);
-                dataBlock.append(tmp);
-                tmp.clear();
-                tmp = i;
-                i.clear();
-                i.append(tmp.data() + dbs, tmp.size() - dbs);
-                tmp.clear();
-            }
-            if (dataBlock.size() <= 65534) {
-                auto baseID = validSlotsNum_();
-                for (auto j = 0; j < dataBlock.size(); j++) {
-                    auto *cdpt = new CDPT(this);
-                    cdpt->data = dataBlock[(qsizetype) j];
-                    cdpt->SID = ID + j + baseID;
-                    if (j != dataBlock.size() - 1)
-                        cdpt->cf = 0xC0;
-                    else
-                        cdpt->cf = 0x40;
-                    sendBuf.append(cdpt);
-                }
-            } else
-                throw "数据内容超过最大连续发送大小";
+void CCP::connectToHost_() { // 该函数只能被CCPManager调用
+    if (cs != -1)return;
+    initiative = true;
+    auto cdpt = newCDPT();
+    cdpt->SID = 0;
+    cdpt->cf = (char) 0x01;
+    sendBufLv1.append(cdpt); // 直接放入一级缓存
+    cs = 0; // 半连接
+    updateWnd_();
+}
+
+void CCP::close(const QByteArray &data) {
+    THREAD_CHECK();
+    if (cs != 2) {
+        auto cdpt = new CDPT(this);
+        cdpt->cf = 0x24;
+        if (!data.isEmpty()) {
+            cdpt->cf |= 0x40;
+            cdpt->data = data;
         }
-        updateWnd_();
+        sendPackage_(cdpt);
+        delete cdpt;
+        cs = 2;
+    }
+    for (auto i: sendWnd)i->deleteLater();
+    for (auto i: sendBufLv1)i->deleteLater();
+    sendWnd.clear();
+    sendBufLv1.clear();
+    sendBufLv2.clear();
+    emit disconnected(data);
+}
+
+void CCP::updateWnd_() {
+    // 更新发送窗口
+    while (sendWnd.contains(ID)) { // 释放掉已经接收停止的数据包
+        if (sendWnd[ID]->isActive())break; // 如果数据包还未被接收, break
+        delete sendWnd[ID]; // 释放内存
+        sendWnd.remove(ID); // 移除
+        ID++; // ID++
+    }
+    updateSendBuf_(); // 更新发送缓存
+    while ((sendWnd.size() < wndSize) && (!sendBufLv1.isEmpty())) { // 循环添加一级缓存的数据包
+        auto cdpt = sendBufLv1.front(); // 取首元素
+        sendBufLv1.pop_front();
+        sendWnd[cdpt->SID] = cdpt; // 放到发送窗口
+        sendPackage_(cdpt); // 发送数据包
+        cdpt->start(timeout); // 启动定时器
+    }
+    while (recvWnd.contains(OID + 1)) { // 如果接收到了数据
+        OID++; // OID++
+        recvBuf.append(recvWnd[OID].data); // 先添加进来数据
+        if (!((recvWnd[OID].cf >> 7) & 0x01)) { // 如果不是链表包
+            readBuf.append(recvBuf); // 添加到可读缓存
+            recvBuf.clear(); // 清空接收缓存
+        }
+        recvWnd.remove(OID); // 移除当前数据包
+    }
+    if (!readBuf.isEmpty())emit readyRead();
+}
+
+void CCP::sendPackage_(CDPT *cdpt) { // 只负责构造数据包和发送
+    QByteArray data;
+    data.append((char) cdpt->cf);
+    unsigned char cmd = (char) (cdpt->cf & (char) 0x07);
+    bool NA = (cdpt->cf >> 5) & 0x01;
+    if (!NA)data += dump(cdpt->SID);
+    if ((cmd == 2) || (cmd == 3))data += dump(cdpt->AID);
+    if ((cdpt->cf >> 6) & 0x01)data += cdpt->data;
+    cm->send_(IP, port, data);
+}
+
+void CCP::updateSendBuf_() { // 更新发送缓存
+    // 从二级缓存解包到一级缓存
+    if (!sendBufLv1.isEmpty() || sendBufLv2.isEmpty())return;
+    auto data = sendBufLv2.front(); // 拿一个数据
+    sendBufLv2.pop_front();
+    // 全部序列化到一级缓存
+    if (data.size() <= dataBlockSize) { // 数据包长度小于块大小
+        auto cdpt = newCDPT();
+        cdpt->data = data;
+        cdpt->cf = 0x40;
+        cdpt->SID = ID + sendWnd.size();
+        sendBufLv1.append(cdpt);
+    } else { // 否则进行拆包
+        QByteArrayList dataBlock; // 数据块
+        QByteArray i = data, tmp;
+        while (!i.isEmpty()) { // 迭代
+            unsigned short dbs = dataBlockSize;
+            if (i.size() <= dataBlockSize)dbs = i.size(); // 计算实际数据块大小
+            tmp.append(i, dbs); // 赋值tmp
+            dataBlock.append(tmp); // 添加到数据块
+            tmp.clear(); // 清空tmp
+            i = i.mid(dbs); // 迭代
+        }
+        auto baseID = sendWnd.size(); // 获取当前窗口长度
+        for (qsizetype j = 0; j < dataBlock.size(); j++) {
+            auto cdpt = newCDPT();
+            cdpt->data = dataBlock[j];
+            cdpt->SID = ID + j + baseID;
+            if (j != dataBlock.size() - 1)cdpt->cf = 0xC0; // 链表包
+            else cdpt->cf = 0x40; // 非链表包
+            sendBufLv1.append(cdpt);
+        }
     }
 }
 
-bool CCP::hasData() const {
-    return !readBuf.empty();
+CDPT *CCP::newCDPT() {
+    auto *cdpt = new CDPT(this);
+    connect(cdpt, &CDPT::timeout, this, &CCP::sendTimeout_);
+    return cdpt;
 }
 
-QByteArray CCP::read() {
-    QByteArray tmp = readBuf.first();
+void CCP::sendTimeout_() { // 只做重发包逻辑和重试次数过多逻辑
+    auto cdpt = (CDPT *) sender();
+    if (cdpt->retryNum < retryNum) {
+        cdpt->retryNum++;
+        cdpt->cf |= 0x10;
+        sendPackage_(cdpt);
+    } else close("对方应答超时");
+}
+
+QByteArray CCP::nextPendingData() {
+    THREAD_CHECK({});
+    auto tmp = readBuf.front();
     readBuf.pop_front();
     return tmp;
 }
 
-void CCP::setDataBlockSize(unsigned short us) {
-    if (us >= 65530)
-        dataBlockSize = 65530;
-    else dataBlockSize = us;
+bool CCP::hasData() {
+    THREAD_CHECK(false);
+    return !readBuf.isEmpty();
 }
 
-void CCP::setHBTTime(unsigned short time) {
-    hbtTime = time;
-    if (cs == 1) {
-        hbt.stop();
-        hbt.start(hbtTime);
-    }
-}
-
-QHostAddress CCP::getIP() const {
-    return IP;
-}
-
-unsigned short CCP::getPort() const {
-    return port;
-}
-
-void CCP::connect_(const QByteArray &data) {
-    if (cs == -1) {
-        auto *tmp = new CDPT(this);
-        tmp->SID = 0;
-        tmp->cf = (char) 0x01;
-        if (data.size() != 0) {
-            tmp->cf |= (char) 0x40;
-            tmp->data = data;
-        }
-        sendBuf.append(tmp);
-        cs = 0;//半连接
-        updateWnd_();
-    }
-}
-
-CCP::~CCP() {
-    close();
-    cm = nullptr;
+QByteArrayList CCP::readAll() {
+    THREAD_CHECK({});
+    auto tmp = readBuf;
     readBuf.clear();
-}
-
-void CCP::sendTimeout_() {
-    auto *cdpt = (CDPT *) sender();
-    if (cdpt->retryNum < retryNum) {
-        cdpt->retryNum++;
-        cdpt->cf |= 0x10;
-        sendWnd.remove(cdpt->SID);
-        sendBuf.append(cdpt);
-    } else {
-        cs = -1;
-        readBuf.append("对方应答超时");
-        sendBuf.clear();
-        sendWnd.clear();
-        recvWnd.clear();
-        hbt.stop();
-        emit disconnected("对方应答超时");
-    }
-    updateWnd_();
-}
-
-void CCP::sendPackage_(CDPT *cdpt) {
-    Dump d;
-    d.push(cdpt->cf);
-    unsigned char cmd = (char) (cdpt->cf & (char) 0x07);
-    bool NA = (cdpt->cf >> 5) & 0x01;
-    if (!NA)
-        d.push(cdpt->SID);
-    if ((cmd == 2) || (cmd == 3))
-        d.push(cdpt->AID);
-    if ((cdpt->cf >> 6) & 0x01)
-        d.push(cdpt->data, cdpt->data.size());
-    QByteArray tmp;
-    tmp.append(d.get(), (qsizetype) d.size());
-    cm->sendF_(IP, port, tmp);
-    if (!NA) {
-        disconnect(cdpt, &CDPT::timeout, this, &CCP::sendTimeout_);
-        connect(cdpt, &CDPT::timeout, this, &CCP::sendTimeout_);
-        cdpt->start(timeout);
-        sendWnd[cdpt->SID] = cdpt;
-        hbt.stop();
-    } else
-        delete cdpt;
+    return tmp;
 }
 
 void CCP::NA_ACK(unsigned short AID) {
-    auto *tmp = new CDPT(this);
-    tmp->AID = AID;
-    tmp->cf = (char) 0x22;
-    sendBuf.append(tmp);
-    updateWnd_();
+    auto cdpt = new CDPT(this);
+    cdpt->AID = AID;
+    cdpt->cf = (char) 0x22;
+    sendPackage_(cdpt);
+    delete cdpt;
 }
 
-void CCP::updateWnd_() {
-    while (sendWnd.contains(ID)) {
-        if (!sendWnd[ID]->isActive()) {
-            delete sendWnd[ID];
-            sendWnd.remove(ID);
-            ID++;
-        } else
-            break;
-    }
-    if ((sendWnd.size() < 256) && (!sendBuf.isEmpty())) {
-        sendPackage_(sendBuf.front());
-        sendBuf.pop_front();
-    }
-    if (sendWnd.isEmpty() && (!hbt.isActive()))
-        hbt.start(hbtTime);
-    //接收窗口连续性判断
-    bool isRead = false;
-    while (recvWnd.contains(OID + 1)) {
-        if ((((recvWnd[OID + 1].cf) >> 7) & 0x01)) {//如果是链表包,转为链表状态
-            if (!link) {
-                link = true;
-                linkStart = OID + 1;
-            }
-        } else {
-            if (link) {
-                //合并包并触发readyRead
-                QByteArray dataFull;
-                unsigned short j = linkStart;
-                while (j != OID + 2) {
-                    dataFull.append(recvWnd[j].data, recvWnd[j].data.size());
-                    recvWnd.remove(j);
-                    j++;
-                }
-                readBuf.append(dataFull);
-                link = false;
-            } else {
-                readBuf.append(recvWnd[OID + 1].data);
-                recvWnd.remove(OID + 1);
-            }
-            isRead = true;
-        }
-        OID++;
-    }
-    if (isRead) emit readyRead();
-}
-
-qsizetype CCP::validSlotsNum_() {
-    qsizetype num = 0;
-    for (const auto &i: sendWnd)
-        if (!((i->cf >> 5) & 0x01))num++;
-    for (const auto &i: sendBuf)
-        if (!((i->cf >> 5) & 0x01))num++;
-    return num;
-}
-
-void CCP::setTimeout(unsigned short num) {
-    timeout = num;
-}
-
-void CCP::setRetryNum(unsigned char num) {
-    retryNum = num;
-}
+CCP::~CCP() = default;
 
 CDPT::CDPT(QObject *parent) : QTimer(parent) {}
 

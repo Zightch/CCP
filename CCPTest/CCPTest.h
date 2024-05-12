@@ -24,13 +24,14 @@ private:
     NewConnect *newConnect = nullptr;
     void bind();
     void enableOperateBtn();
-    void connected(void *);
+    void connected(CCP *);
     void showMsg();
     void closeConnect();
     void disconnected();
-    void appendLog(const QByteArray &);
+    void appendLog(const QString &);
     void connectFail(const QHostAddress &, unsigned short, const QByteArray &);
     void toConnect(const QByteArray &, unsigned short);
     QMap<QString, ShowMsg*> connectList;
+    void closeEvent(QCloseEvent *) override;
 };
 #endif // CCPTEST_H

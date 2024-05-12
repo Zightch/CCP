@@ -1,12 +1,6 @@
-//
-// Created by Zightch on 2023/11/5.
-//
-
-// You may need to build the project (run Qt uic code generator) to get "ui_ShowMsg.h" resolved
-
 #include "ShowMsg.h"
 #include "ui_ShowMsg.h"
-#include "tools/IP.h"
+#include "tools/tools.h"
 
 ShowMsg::ShowMsg(CCP *ccp, QWidget *parent) : QWidget(parent), ui(new Ui::ShowMsg) {
     ui->setupUi(this);
@@ -26,7 +20,7 @@ CCP *ShowMsg::getCCP() {
 
 void ShowMsg::recv() {
     while(ccp->hasData()) {
-        auto data  = ccp->read();
+        auto data  = ccp->nextPendingData();
         ui->recvData->appendPlainText(data);
     }
 }
