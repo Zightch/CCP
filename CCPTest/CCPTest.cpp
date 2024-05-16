@@ -30,7 +30,10 @@ void CCPTest::bind() {
         QStringList error;
         auto ipStr = ui->localIP->text().toLocal8Bit();
         if (ipStr.isEmpty())error = ccpManager->bind(ui->localPort->value());
-        else error.append(ccpManager->bind(ipStr, ui->localPort->value()));
+        else {
+            auto ret = ccpManager->bind(ipStr, ui->localPort->value());
+            if (!ret.isEmpty())error.append(ret);
+        }
         if (error.isEmpty()) {
             ui->bind->setText("关闭");
             uiCTRL(true);
