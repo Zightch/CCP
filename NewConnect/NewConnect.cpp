@@ -25,7 +25,7 @@ void NewConnect::restoreUI() {
     ui->connect->setEnabled(true);
     ui->IP->setEnabled(true);
     ui->port->setEnabled(true);
-    tmpIP = "";
+    tmpIP.clear();
     tmpPort = -1;
 }
 
