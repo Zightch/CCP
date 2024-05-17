@@ -16,7 +16,7 @@ public:
 
     unsigned short getPort();
 
-    void close(const QByteArray & = QByteArray());
+    void close(const QByteArray & = {});
 
     void send(const QByteArray &);
 
@@ -31,7 +31,7 @@ public slots:
 
 signals:
 
-    void disconnected(const QByteArray & = QByteArray());
+    void disconnected(const QByteArray & = {});
 
     void readyRead();
 
