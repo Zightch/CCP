@@ -29,7 +29,7 @@ void ShowMsg::recv() {
         if (ui->recvIsHex->isChecked())
             ui->recvData->appendPlainText(bytesToHexString(data));
         else
-            ui->recvData->appendPlainText(QString::fromLocal8Bit(data));
+            ui->recvData->appendPlainText(data);
     }
 }
 
@@ -47,7 +47,7 @@ void ShowMsg::hex(Qt::CheckState state) {
         if (state == Qt::Unchecked) { // 未选中
             ui->recvData->clear();
             for (const auto &i: recvData)
-                ui->recvData->appendPlainText(QString::fromLocal8Bit(i));
+                ui->recvData->appendPlainText(i);
         }
         if (state == Qt::Checked) { // 选中
             ui->recvData->clear();
