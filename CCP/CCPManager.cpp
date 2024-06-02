@@ -137,7 +137,7 @@ void CCPManager::recv_() { // 来源于udpSocket信号调用, 不会被别的线
         auto data = datagrams.data();
         if (!data.isEmpty()) {
             proc_(IP, port, data);
-            emit cLog("↓ " + IPPort(IP, port) + " : " + BAToHex(data));
+            emit cLog("↓ " + IPPort(IP, port) + " : " + bytesToHexString(data));
         }
     }
 }
@@ -172,7 +172,7 @@ void CCPManager::send_(const QHostAddress &IP, unsigned short port, const QByteA
     else if (protocol == QUdpSocket::IPv6Protocol)udp = ipv6;
     if (udp == nullptr)return;
     udp->writeDatagram(data, IP, port);
-    emit cLog("↑ " + IPPort(IP, port) + " : " + BAToHex(data));
+    emit cLog("↑ " + IPPort(IP, port) + " : " + bytesToHexString(data));
 }
 
 bool CCPManager::threadCheck_(const QString &funcName) {

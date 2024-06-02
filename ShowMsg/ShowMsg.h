@@ -1,10 +1,4 @@
-//
-// Created by Zightch on 2023/11/5.
-//
-
-#ifndef CCPTEST_SHOWMSG_H
-#define CCPTEST_SHOWMSG_H
-
+#pragma once
 #include <QWidget>
 #include "CCP/CCP.h"
 
@@ -24,9 +18,11 @@ public:
 private:
     Ui::ShowMsg *ui;
     CCP *ccp = nullptr;
+    QString sendLastHexStr;
+private slots:
     void recv();
     void send();
+    void hex(Qt::CheckState);
+    void sendDataChange();
 };
 
-
-#endif //CCPTEST_SHOWMSG_H

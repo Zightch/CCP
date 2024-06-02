@@ -63,11 +63,12 @@ void CCP::proc_(const QByteArray &data) { // 该函数只能被CCPManager调用
         } else if (cmd == 2) { // ACK指令, 应答
             if (NA) {
                 unsigned short AID = (*(unsigned short *) (data_c + 1));
-                if (sendWnd.count(AID) == 1) {
+                if (sendWnd.contains(AID)) {
                     sendWnd[AID]->stop();
                     if (AID == 0 && cs == 0) {
                         cs = 1;
                         cm->ccpConnected_(this);
+                        hbt.start(hbtTime);
                     }
                 }
             }
