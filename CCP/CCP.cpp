@@ -9,7 +9,7 @@
 CCP::CCP(CCPManager *parent, const QHostAddress &IP, unsigned short p) : QObject(parent), IP(IP), port(p), cm(parent) {
     connect(&hbt, &QTimer::timeout, this, [&]() {
         if (cs == 1) {
-            auto *cdpt = new CDPT(this);
+            auto *cdpt = newCDPT();
             cdpt->cf = 0x05;
             cdpt->SID = ID + sendWnd.size() + sendBufLv1.size();
             sendBufLv1.append(cdpt);

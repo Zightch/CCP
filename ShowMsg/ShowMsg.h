@@ -19,10 +19,10 @@ private:
     Ui::ShowMsg *ui;
     CCP *ccp = nullptr;
     QString sendLastHexStr;
+    QByteArrayList recvData;
 private slots:
     void recv();
     void send();
     void hex(Qt::CheckState);
     void sendDataChange();
 };
-

@@ -25,10 +25,11 @@ CCP *ShowMsg::getCCP() {
 void ShowMsg::recv() {
     while (ccp->hasData()) {
         auto data = ccp->nextPendingData();
+        recvData.append(data);
         if (ui->recvIsHex->isChecked())
             ui->recvData->appendPlainText(bytesToHexString(data));
         else
-            ui->recvData->appendPlainText(data);
+            ui->recvData->appendPlainText(QString::fromLocal8Bit(data));
     }
 }
 
@@ -44,18 +45,14 @@ void ShowMsg::hex(Qt::CheckState state) {
     auto checkBox = (QCheckBox *) sender();
     if (checkBox == ui->recvIsHex) {
         if (state == Qt::Unchecked) { // 未选中
-            auto data = ui->recvData->toPlainText();
             ui->recvData->clear();
-            auto list = data.split("\n");
-            for (const auto &i: list)
-                ui->recvData->appendPlainText(hexStringToBytes(i));
+            for (const auto &i: recvData)
+                ui->recvData->appendPlainText(QString::fromLocal8Bit(i));
         }
         if (state == Qt::Checked) { // 选中
-            auto data = ui->recvData->toPlainText();
             ui->recvData->clear();
-            auto list = data.split("\n");
-            for (const auto &i: list)
-                ui->recvData->appendPlainText(bytesToHexString(i.toUtf8()));
+            for (const auto &i: recvData)
+                ui->recvData->appendPlainText(bytesToHexString(i));
         }
     }
     if (checkBox == ui->sendIsHex) {
