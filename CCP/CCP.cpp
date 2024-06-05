@@ -101,7 +101,8 @@ void CCP::proc_(const QByteArray &data) { // 该函数只能被CCPManager调用
                     OID = SID;
                     hbt.stop();
                     hbt.start(hbtTime);
-                }
+                } else if (!RT)
+                    close("心跳包ID不正确");
             }
         }
     } else {
@@ -169,6 +170,7 @@ void CCP::close(const QByteArray &data) {
     sendWnd.clear();
     sendBufLv1.clear();
     sendBufLv2.clear();
+    hbt.stop();
     emit disconnected(data);
 }
 
