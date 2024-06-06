@@ -64,7 +64,7 @@
 ## 花絮
 这个协议来源于我之前开发的一个叫做CSG的游戏框架(unity 3d联机框架)  
 这个框架中有一个简单的UDP可靠传输机制  
-后来这个协议从框架单独分裂出来, 并加以完善, 构成今天的CFUP
+后来这个协议从框架单独分裂出来, 并加以完善, 构成今天的CFUP  
 最开始名字是CSG framework host Communication Protocol, 缩写CCP  
 但是由于CCP又会被翻译成~~中国共产党~~, 所以被迫改名  
 最后确定的名字为CSG Framework Universal Protocol, 缩写CFUP
