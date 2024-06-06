@@ -3,11 +3,11 @@
 #include "tools/tools.h"
 #include <QRegularExpression>
 
-ShowMsg::ShowMsg(CCP *ccp, QWidget *parent) : QWidget(parent), ui(new Ui::ShowMsg) {
+ShowMsg::ShowMsg(CFUP *cfup, QWidget *parent) : QWidget(parent), ui(new Ui::ShowMsg) {
     ui->setupUi(this);
-    this->ccp = ccp;
-    setWindowTitle(IPPort(ccp->getIP(), ccp->getPort()));
-    connect(ccp, &CCP::readyRead, this, &ShowMsg::recv);
+    this->cfup = cfup;
+    setWindowTitle(IPPort(cfup->getIP(), cfup->getPort()));
+    connect(cfup, &CFUP::readyRead, this, &ShowMsg::recv);
     connect(ui->send, &QPushButton::clicked, this, &ShowMsg::send);
     connect(ui->recvIsHex, &QCheckBox::checkStateChanged, this, &ShowMsg::hex);
     connect(ui->sendIsHex, &QCheckBox::checkStateChanged, this, &ShowMsg::hex);
@@ -18,13 +18,13 @@ ShowMsg::~ShowMsg() {
     delete ui;
 }
 
-CCP *ShowMsg::getCCP() {
-    return ccp;
+CFUP *ShowMsg::getCFUP() {
+    return cfup;
 }
 
 void ShowMsg::recv() {
-    while (ccp->hasData()) {
-        auto data = ccp->nextPendingData();
+    while (cfup->hasData()) {
+        auto data = cfup->nextPendingData();
         recvData.append(data);
         if (ui->recvIsHex->isChecked())
             ui->recvData->appendPlainText(bytesToHexString(data));
@@ -36,9 +36,9 @@ void ShowMsg::recv() {
 void ShowMsg::send() {
     auto data = ui->sendData->toPlainText();
     if (ui->sendIsHex->isChecked())
-        ccp->send(hexStringToBytes(data));
+        cfup->send(hexStringToBytes(data));
     else
-        ccp->send(data.toUtf8());
+        cfup->send(data.toUtf8());
 }
 
 void ShowMsg::hex(Qt::CheckState state) {

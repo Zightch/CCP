@@ -1,12 +1,6 @@
-//
-// Created by Zightch on 2023/11/6.
-//
-
-#ifndef CSCPTEST_NEWCONNECT_H
-#define CSCPTEST_NEWCONNECT_H
+#pragma once
 
 #include <QWidget>
-
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class NewConnect; }
@@ -37,6 +31,3 @@ private:
     QByteArray tmpIP;
     int tmpPort = -1;
 };
-
-
-#endif //CSCPTEST_NEWCONNECT_H

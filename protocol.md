@@ -1,9 +1,10 @@
-# CCP协议
-### 版本24
-### CSG framework host Communication Protocol
-### CSG框架 主机通信协议
+# CFUP协议
+### 版本25
+### CSG Framework Universal Protocol
+### CSG框架 通用协议
 
 ## 更新日志
+* CCP更名CFUP(25)
 * 限制可靠传输时数据包长度与窗口大小, 优化某些细节字眼(24)
 * CSCP更名CCP(23)
 * 解除对IPv4和IPv6的限制(22)
@@ -226,6 +227,6 @@ sequenceDiagram
   若迫不得已使用域名, 请自行实现域名解析与多条目检索等功能
 * 65524Byte的由来  
   UDP头部8个字节, UDP数据包最长65535  
-  CCP头部包含data最长的情况为[S4](#协议表), 头部占3个字节  
+  CFUP头部包含data最长的情况为[S4](#协议表), 头部占3个字节  
   65535 - 8 - 3 = 65524  
   另外这不是一个固定值, 需要根据你的实现来确定

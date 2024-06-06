@@ -4,11 +4,11 @@
 #include <QHash>
 #include <QHostAddress>
 
-class CCPManager;
+class CFUPManager;
 class CDPT;
 
-//CCP协议对象类(实现)
-class CCP final : public QObject {
+//CFUP协议对象类(实现)
+class CFUP final : public QObject {
 Q_OBJECT
 
 public:
@@ -40,20 +40,20 @@ private slots:
     void sendTimeout_();
 
 private:
-    class CCPDP {//纯数据
+    class CFUPDP {//纯数据
     public:
         unsigned char cf = 0;//属性和命令
         unsigned short SID = 0;//本包ID
         QByteArray data{};//用户数据
     };
 
-    CCPManager *cm = nullptr; // CCPManager
+    CFUPManager *cm = nullptr; // CFUPManager
     char cs = -1; // -1未连接, 0半连接, 1连接成功, 2已断开
     unsigned short ID = 0; // 自己的包ID
     unsigned short OID = -1; // 对方当前包ID
 
     QHash<unsigned short, CDPT *> sendWnd; // 发送窗口
-    QHash<unsigned short, CCPDP> recvWnd; // 接收窗口
+    QHash<unsigned short, CFUPDP> recvWnd; // 接收窗口
     QList<CDPT *> sendBufLv1; // 发送1级缓存
     QByteArrayList readBuf; // 可读缓存
     QByteArrayList sendBufLv2; // 发送2级缓存
@@ -72,9 +72,9 @@ private:
     unsigned short timeout = 1000; // 超时时间
     unsigned char retryNum = 2; // 重试次数
 
-    explicit CCP(CCPManager *, const QHostAddress &, unsigned short);
+    explicit CFUP(CFUPManager *, const QHostAddress &, unsigned short);
 
-    ~CCP() override;
+    ~CFUP() override;
 
     bool threadCheck_(const QString &); // 线程检查
 
@@ -92,13 +92,13 @@ private:
 
     void NA_ACK(unsigned short);
 
-    friend class CCPManager;
+    friend class CFUPManager;
 
     friend class CDPT;
 };
 
-//CCP数据包+定时器(定义)
-class CDPT : public QTimer, public CCP::CCPDP {
+//CFUP数据包+定时器(定义)
+class CDPT : public QTimer, public CFUP::CFUPDP {
 Q_OBJECT
 
 private:
@@ -108,5 +108,5 @@ private:
 
     unsigned char retryNum = 0;//重发次数
     unsigned short AID = 0;//应答包ID
-    friend class CCP;
+    friend class CFUP;
 };

@@ -1,55 +1,55 @@
-#include "CCPTest.h"
-#include "./ui_CCPTest.h"
+#include "CFUPTest.h"
+#include "./ui_CFUPTest.h"
 #include <QMessageBox>
 #include "tools/tools.h"
 
-CCPTest::CCPTest(QWidget *parent) : QWidget(parent), ui(new Ui::CCPTest) {
+CFUPTest::CFUPTest(QWidget *parent) : QWidget(parent), ui(new Ui::CFUPTest) {
     ui->setupUi(this);
     newConnect = new NewConnect();
-    connect(ui->bind, &QPushButton::clicked, this, &CCPTest::bind);
-    connect(ui->connectList, &QListWidget::itemSelectionChanged, this, &CCPTest::enableOperateBtn);
-    connect(ui->showMsg, &QPushButton::clicked, this, &CCPTest::showMsg);
-    connect(ui->closeConnect, &QPushButton::clicked, this, &CCPTest::closeConnect);
+    connect(ui->bind, &QPushButton::clicked, this, &CFUPTest::bind);
+    connect(ui->connectList, &QListWidget::itemSelectionChanged, this, &CFUPTest::enableOperateBtn);
+    connect(ui->showMsg, &QPushButton::clicked, this, &CFUPTest::showMsg);
+    connect(ui->closeConnect, &QPushButton::clicked, this, &CFUPTest::closeConnect);
     connect(ui->newConnect, &QPushButton::clicked, newConnect, &NewConnect::show);
-    connect(newConnect, &NewConnect::toConnect, this, &CCPTest::toConnect);
+    connect(newConnect, &NewConnect::toConnect, this, &CFUPTest::toConnect);
 }
 
-CCPTest::~CCPTest() {
+CFUPTest::~CFUPTest() {
     delete ui;
 }
 
-void CCPTest::bind() {
+void CFUPTest::bind() {
     auto uiCTRL = [this](bool i) {
         ui->localIP->setEnabled(!i);
         ui->localPort->setEnabled(!i);
         ui->connectList->setEnabled(i);
         ui->newConnect->setEnabled(i);
     };
-    if (ccpManager == nullptr) {
-        ccpManager = new CCPManager(this);
+    if (cfupManager == nullptr) {
+        cfupManager = new CFUPManager(this);
         QStringList error;
         auto ipStr = ui->localIP->text().toLocal8Bit();
-        if (ipStr.isEmpty())error = ccpManager->bind(ui->localPort->value());
+        if (ipStr.isEmpty())error = cfupManager->bind(ui->localPort->value());
         else {
-            auto ret = ccpManager->bind(ipStr, ui->localPort->value());
+            auto ret = cfupManager->bind(ipStr, ui->localPort->value());
             if (!ret.isEmpty())error.append(ret);
         }
         if (error.isEmpty()) {
             ui->bind->setText("关闭");
             uiCTRL(true);
-            connect(ccpManager, &CCPManager::connected, this, &CCPTest::connected);
-            connect(ccpManager, &CCPManager::connectFail, this, &CCPTest::connectFail);
-            connect(ccpManager, &CCPManager::cLog, this, &CCPTest::appendLog);
+            connect(cfupManager, &CFUPManager::connected, this, &CFUPTest::connected);
+            connect(cfupManager, &CFUPManager::connectFail, this, &CFUPTest::connectFail);
+            connect(cfupManager, &CFUPManager::cLog, this, &CFUPTest::appendLog);
         } else {
             QString tmp;
             for (const auto &i: error)tmp += (i + "\n");
             QMessageBox::information(this, "绑定失败", tmp.trimmed());
-            ccpManager->quit();
-            ccpManager = nullptr;
+            cfupManager->quit();
+            cfupManager = nullptr;
         }
     } else {
-        ccpManager->quit();
-        ccpManager = nullptr;
+        cfupManager->quit();
+        cfupManager = nullptr;
         ui->connectList->clear();
         for (auto i: connectList)
             delete i;
@@ -61,27 +61,27 @@ void CCPTest::bind() {
     }
 }
 
-void CCPTest::closeConnect() {
+void CFUPTest::closeConnect() {
     auto item = ui->connectList->currentItem();
     auto client = connectList[item->text()];
-    client->getCCP()->close();
+    client->getCFUP()->close();
 }
 
-void CCPTest::enableOperateBtn() {
+void CFUPTest::enableOperateBtn() {
     ui->showMsg->setEnabled(true);
     ui->closeConnect->setEnabled(true);
 }
 
-void CCPTest::connected(CCP *ccp) {
+void CFUPTest::connected(CFUP *cfup) {
     //在客户端列表里添加一个元素(IP:port)
-    auto ipPort = IPPort(ccp->getIP(), ccp->getPort());
+    auto ipPort = IPPort(cfup->getIP(), cfup->getPort());
     if (!connectList.contains(ipPort)) {
         ui->connectList->addItem(ipPort);
         //去构造一个ShowMsg窗口, 以备显示
-        auto sm = new ShowMsg(ccp);
+        auto sm = new ShowMsg(cfup);
         //Map保存所有客户端(ShowMsg)
         connectList.insert(ipPort, sm);
-        connect(ccp, &CCP::disconnected, this, &CCPTest::disconnected);
+        connect(cfup, &CFUP::disconnected, this, &CFUPTest::disconnected);
     }
     {
         QByteArray IP;
@@ -94,14 +94,14 @@ void CCPTest::connected(CCP *ccp) {
     }
 }
 
-void CCPTest::showMsg() {
+void CFUPTest::showMsg() {
     auto ipPort = ui->connectList->currentItem()->text();
     connectList[ipPort]->show();
 }
 
-void CCPTest::disconnected() {
-    auto ccp = (CCP *) sender();
-    auto ipPort = IPPort(ccp->getIP(), ccp->getPort());
+void CFUPTest::disconnected() {
+    auto cfup = (CFUP *) sender();
+    auto ipPort = IPPort(cfup->getIP(), cfup->getPort());
     //窗口
     auto client = connectList[ipPort];
     delete client;
@@ -121,23 +121,23 @@ void CCPTest::disconnected() {
     }
 }
 
-void CCPTest::appendLog(const QString &data) {
+void CFUPTest::appendLog(const QString &data) {
     ui->logger->appendPlainText(data);
 }
 
-void CCPTest::connectFail(const QHostAddress &IP, unsigned short port, const QByteArray &data) {
+void CFUPTest::connectFail(const QHostAddress &IP, unsigned short port, const QByteArray &data) {
     newConnect->restoreUI();
     QMessageBox::information(newConnect, IPPort(IP, port) + " 连接失败", data);
 }
 
-void CCPTest::toConnect(const QByteArray &IP, unsigned short port) {
-    if (ccpManager != nullptr)
-        ccpManager->connectToHost(IP, port);
+void CFUPTest::toConnect(const QByteArray &IP, unsigned short port) {
+    if (cfupManager != nullptr)
+        cfupManager->connectToHost(IP, port);
 }
 
-void CCPTest::closeEvent(QCloseEvent *e) {
-    if (ccpManager != nullptr)ccpManager->quit();
-    ccpManager = nullptr;
+void CFUPTest::closeEvent(QCloseEvent *e) {
+    if (cfupManager != nullptr)cfupManager->quit();
+    cfupManager = nullptr;
     if (newConnect != nullptr) newConnect->deleteLater();
     newConnect = nullptr;
     QWidget::closeEvent(e);

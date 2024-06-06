@@ -1,6 +1,6 @@
 #pragma once
 #include <QWidget>
-#include "CCP/CCP.h"
+#include "CFUP/CFUP.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class ShowMsg; }
@@ -10,14 +10,14 @@ class ShowMsg : public QWidget {
 Q_OBJECT
 
 public:
-    explicit ShowMsg(CCP *, QWidget * = nullptr);
+    explicit ShowMsg(CFUP *, QWidget * = nullptr);
 
     ~ShowMsg() override;
 
-    CCP *getCCP();
+    CFUP *getCFUP();
 private:
     Ui::ShowMsg *ui;
-    CCP *ccp = nullptr;
+    CFUP *cfup = nullptr;
     QString sendLastHexStr;
     QByteArrayList recvData;
 private slots:

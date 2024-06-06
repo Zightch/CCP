@@ -1,12 +1,12 @@
-#include "CCP.h"
-#include "CCPManager.h"
+#include "CFUP.h"
+#include "CFUPManager.h"
 #include <QDateTime>
 #include <QThread>
 #include "tools/tools.h"
 
 #define THREAD_CHECK(ret) if (!threadCheck_(__FUNCTION__))return ret
 
-CCP::CCP(CCPManager *parent, const QHostAddress &IP, unsigned short p) : QObject(parent), IP(IP), port(p), cm(parent) {
+CFUP::CFUP(CFUPManager *parent, const QHostAddress &IP, unsigned short p) : QObject(parent), IP(IP), port(p), cm(parent) {
     connect(&hbt, &QTimer::timeout, this, [&]() {
         if (cs == 1) {
             auto *cdpt = newCDPT();
@@ -18,7 +18,7 @@ CCP::CCP(CCPManager *parent, const QHostAddress &IP, unsigned short p) : QObject
     });
 }
 
-bool CCP::threadCheck_(const QString &funcName) {
+bool CFUP::threadCheck_(const QString &funcName) {
     if (QThread::currentThread() == thread())return true;
     qWarning()
             << "函数" << funcName << "不允许在其他线程调用, 操作被拒绝.\n"
@@ -26,17 +26,17 @@ bool CCP::threadCheck_(const QString &funcName) {
     return false;
 }
 
-QHostAddress CCP::getIP() {
+QHostAddress CFUP::getIP() {
     THREAD_CHECK(QHostAddress::Null);
     return IP;
 }
 
-unsigned short CCP::getPort() {
+unsigned short CFUP::getPort() {
     THREAD_CHECK(0);
     return port;
 }
 
-void CCP::proc_(const QByteArray &data) { // 该函数只能被CCPManager调用
+void CFUP::proc_(const QByteArray &data) { // 该函数只能被CFUPManager调用
     const char *data_c = data.data();
     unsigned char cf = data_c[0];
 
@@ -67,7 +67,7 @@ void CCP::proc_(const QByteArray &data) { // 该函数只能被CCPManager调用
                     sendWnd[AID]->stop();
                     if (AID == 0 && cs == 0) {
                         cs = 1;
-                        cm->ccpConnected_(this);
+                        cm->cfupConnected_(this);
                         hbt.start(hbtTime);
                     }
                 }
@@ -83,7 +83,7 @@ void CCP::proc_(const QByteArray &data) { // 该函数只能被CCPManager调用
                     cs = 1;
                     delete sendWnd[0];
                     sendWnd.remove(0);
-                    cm->ccpConnected_(this);
+                    cm->cfupConnected_(this);
                     hbt.start(hbtTime);
                 }
             } else if (RT)NA_ACK(0);
@@ -124,14 +124,14 @@ void CCP::proc_(const QByteArray &data) { // 该函数只能被CCPManager调用
     updateWnd_();
 }
 
-void CCP::send(const QByteArray &data) {
+void CFUP::send(const QByteArray &data) {
     THREAD_CHECK();
     if (cs != 1 || data.isEmpty())return;
     sendBufLv2.append(data);
     updateWnd_();
 }
 
-void CCP::sendNow(const QByteArray &data) {
+void CFUP::sendNow(const QByteArray &data) {
     THREAD_CHECK();
     if (cs != 1 || data.isEmpty())return;
     auto *tmp = new CDPT(this);
@@ -141,7 +141,7 @@ void CCP::sendNow(const QByteArray &data) {
     delete tmp;
 }
 
-void CCP::connectToHost_() { // 该函数只能被CCPManager调用
+void CFUP::connectToHost_() { // 该函数只能被CFUPManager调用
     if (cs != -1)return;
     initiative = true;
     auto cdpt = newCDPT();
@@ -152,7 +152,7 @@ void CCP::connectToHost_() { // 该函数只能被CCPManager调用
     updateWnd_();
 }
 
-void CCP::close(const QByteArray &data) {
+void CFUP::close(const QByteArray &data) {
     THREAD_CHECK();
     if (cs != 2) {
         auto cdpt = new CDPT(this);
@@ -174,7 +174,7 @@ void CCP::close(const QByteArray &data) {
     emit disconnected(data);
 }
 
-void CCP::updateWnd_() {
+void CFUP::updateWnd_() {
     // 更新发送窗口
     while (sendWnd.contains(ID)) { // 释放掉已经接收停止的数据包
         if (sendWnd[ID]->isActive())break; // 如果数据包还未被接收, break
@@ -202,7 +202,7 @@ void CCP::updateWnd_() {
     if (!readBuf.isEmpty())emit readyRead();
 }
 
-void CCP::sendPackage_(CDPT *cdpt) { // 只负责构造数据包和发送
+void CFUP::sendPackage_(CDPT *cdpt) { // 只负责构造数据包和发送
     QByteArray data;
     data.append((char) cdpt->cf);
     unsigned char cmd = (char) (cdpt->cf & (char) 0x07);
@@ -213,7 +213,7 @@ void CCP::sendPackage_(CDPT *cdpt) { // 只负责构造数据包和发送
     cm->send_(IP, port, data);
 }
 
-void CCP::updateSendBuf_() { // 更新发送缓存
+void CFUP::updateSendBuf_() { // 更新发送缓存
     // 从二级缓存解包到一级缓存
     if (!sendBufLv1.isEmpty() || sendBufLv2.isEmpty())return;
     auto data = sendBufLv2.front(); // 拿一个数据
@@ -248,13 +248,13 @@ void CCP::updateSendBuf_() { // 更新发送缓存
     }
 }
 
-CDPT *CCP::newCDPT() {
+CDPT *CFUP::newCDPT() {
     auto *cdpt = new CDPT(this);
-    connect(cdpt, &CDPT::timeout, this, &CCP::sendTimeout_);
+    connect(cdpt, &CDPT::timeout, this, &CFUP::sendTimeout_);
     return cdpt;
 }
 
-void CCP::sendTimeout_() { // 只做重发包逻辑和重试次数过多逻辑
+void CFUP::sendTimeout_() { // 只做重发包逻辑和重试次数过多逻辑
     auto cdpt = (CDPT *) sender();
     if (cdpt->retryNum < retryNum) {
         cdpt->retryNum++;
@@ -263,26 +263,26 @@ void CCP::sendTimeout_() { // 只做重发包逻辑和重试次数过多逻辑
     } else close("对方应答超时");
 }
 
-QByteArray CCP::nextPendingData() {
+QByteArray CFUP::nextPendingData() {
     THREAD_CHECK({});
     auto tmp = readBuf.front();
     readBuf.pop_front();
     return tmp;
 }
 
-bool CCP::hasData() {
+bool CFUP::hasData() {
     THREAD_CHECK(false);
     return !readBuf.isEmpty();
 }
 
-QByteArrayList CCP::readAll() {
+QByteArrayList CFUP::readAll() {
     THREAD_CHECK({});
     auto tmp = readBuf;
     readBuf.clear();
     return tmp;
 }
 
-void CCP::NA_ACK(unsigned short AID) {
+void CFUP::NA_ACK(unsigned short AID) {
     auto cdpt = new CDPT(this);
     cdpt->AID = AID;
     cdpt->cf = (char) 0x22;
@@ -290,7 +290,7 @@ void CCP::NA_ACK(unsigned short AID) {
     delete cdpt;
 }
 
-CCP::~CCP() = default;
+CFUP::~CFUP() = default;
 
 CDPT::CDPT(QObject *parent) : QTimer(parent) {}
 
