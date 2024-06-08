@@ -136,8 +136,8 @@ void CFUPManager::recv_() { // 来源于udpSocket信号调用, 不会被别的�
         auto port = datagrams.senderPort();
         auto data = datagrams.data();
         if (!data.isEmpty()) {
-            proc_(IP, port, data);
             emit cLog("↓ " + IPPort(IP, port) + " : " + bytesToHexString(data));
+            proc_(IP, port, data);
         }
     }
 }
