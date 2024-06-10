@@ -20,6 +20,7 @@ set(PROJECT_SOURCES
         CFUPTest/CFUPTest.ui
         ShowMsg/ShowMsg.cpp
         ShowMsg/ShowMsg.ui
+        CFUP/CFUP_cmd.cpp
         CFUP/CFUP.cpp
         CFUP/CFUPManager.cpp
         tools/tools.cpp

@@ -9,7 +9,7 @@
 CFUP::CFUP(CFUPManager *parent, const QHostAddress &IP, unsigned short p) : QObject(parent), IP(IP), port(p), cm(parent) {
     connect(&hbt, &QTimer::timeout, this, [&]() {
         if (cs == 1) {
-            auto *cdpt = newCDPT();
+            auto *cdpt = newCDPT_();
             cdpt->cf = 0x05;
             cdpt->SID = ID + sendWnd.size() + sendBufLv1.size();
             sendBufLv1.append(cdpt);
@@ -37,8 +37,7 @@ unsigned short CFUP::getPort() {
 }
 
 void CFUP::proc_(const QByteArray &data) { // 该函数只能被CFUPManager调用
-    const char *data_c = data.data();
-    unsigned char cf = data_c[0];
+    unsigned char cf = data[0];
 
     bool UDL = ((cf >> 7) & 0x01);
     bool UD = ((cf >> 6) & 0x01);
@@ -48,75 +47,25 @@ void CFUP::proc_(const QByteArray &data) { // 该函数只能被CFUPManager调�
 
     if (NA && RT)return;
     if (1 <= cmd && cmd <= 5 && !UDL) {
-        if (cmd == 1) { // RC指令, 请求
-            if (!RT) {
-                auto cdpt = newCDPT();
-                cdpt->SID = 0;
-                cdpt->AID = 0;
-                cdpt->cf = (char) 0x03;
-                sendBufLv1.append(cdpt);
-                if (cs == -1) {
-                    OID = 0;
-                    cs = 0;//半连接
-                }
-            }
-        } else if (cmd == 2) { // ACK指令, 应答
-            if (NA) {
-                unsigned short AID = (*(unsigned short *) (data_c + 1));
-                if (sendWnd.contains(AID)) {
-                    sendWnd[AID]->stop();
-                    if (AID == 0 && cs == 0) {
-                        cs = 1;
-                        cm->cfupConnected_(this);
-                        hbt.start(hbtTime);
-                    }
-                }
-            }
-        } else if (cmd == 3) { // RC ACK指令, 请求应答
-            if (ID == 0 && OID == 65535 && !RT) {
-                NA_ACK(0);
-                unsigned short SID = (*(unsigned short *) (data_c + 1));
-                unsigned short AID = (*(unsigned short *) (data_c + 3));
-                if (cs == 0 && SID == 0 && AID == 0) {
-                    ID = 1;
-                    OID = 0;
-                    cs = 1;
-                    delete sendWnd[0];
-                    sendWnd.remove(0);
-                    cm->cfupConnected_(this);
-                    hbt.start(hbtTime);
-                }
-            } else if (RT)NA_ACK(0);
-        } else if (cmd == 4) { // C指令, 断开
-            if (NA) { // NA必须有
-                QByteArray userData;
-                if (UD)userData = data.mid(1);
-                close(userData);
-            }
-        } else if (cmd == 5) { // H命令, 心跳
-            if (cs == 1) {
-                unsigned short SID = (*(unsigned short *) (data_c + 1));
-                NA_ACK(SID);
-                if (SID == OID + 1) {
-                    OID = SID;
-                    hbt.stop();
-                    hbt.start(hbtTime);
-                } else if (!RT)
-                    close("心跳包ID不正确");
-            }
-        }
+        if (cmd == 1)cmdRC_(data); // RC指令, 请求
+        if (cmd == 2)cmdACK_(NA, data); // ACK指令, 应答
+        if (cmd == 3)cmdRC_ACK_(RT, data); // RC ACK指令, 请求应答
+        if (cmd == 4)cmdC_(NA, UD, data); // C指令, 断开
+        if (cmd == 5)cmdH_(RT, data); // H命令, 心跳包
     } else {
-        if (!NA) {//需要回复
-            unsigned short SID = (*(unsigned short *) (data_c + 1));
-            NA_ACK(SID);
-            if (UD) { // 有用户数据
-                if (recvWnd.contains(SID) && !RT)close("窗口数据发生重叠"); // 如果窗口包含该数据而且不是重发包
-                else if (!RT || !recvWnd.contains(SID)) { //如果是重发包，并且接收窗口中已经有该数据，则不需要再次存储
-                    // 从数据包中提取用户数据，跳过前三个字节的头部信息
-                    recvWnd[SID] = {cf, SID, data.mid(3)};
-                }
+        if (!NA && UD) {//需要回复, 有用户数据
+            if (data.size() <= 11)return;
+            unsigned short SID = (*(unsigned short *) (data.data() + 1));
+            long long time = *(long long *) (data.data() + 3);
+            if (!time_(SID, time))return;
+            NA_ACK_(SID);
+            if (recvWnd.contains(SID) && !RT)close("窗口数据发生重叠"); // 如果窗口包含该数据而且不是重发包
+            else if (!RT || !recvWnd.contains(SID)) { //如果是重发包，并且接收窗口中已经有该数据，则不需要再次存储
+                // 从数据包中提取用户数据，跳过前三个字节的头部信息
+                recvWnd[SID] = {cf, SID, data.mid(11)};
             }
         } else if (UD) {//有用户数据
+            if (data.size() <= 1)return;
             readBuf.append(data.mid(1));
             emit readyRead();
         }
@@ -144,7 +93,7 @@ void CFUP::sendNow(const QByteArray &data) {
 void CFUP::connectToHost_() { // 该函数只能被CFUPManager调用
     if (cs != -1)return;
     initiative = true;
-    auto cdpt = newCDPT();
+    auto cdpt = newCDPT_();
     cdpt->SID = 0;
     cdpt->cf = (char) 0x01;
     sendBufLv1.append(cdpt); // 直接放入一级缓存
@@ -207,7 +156,10 @@ void CFUP::sendPackage_(CDPT *cdpt) { // 只负责构造数据包和发送
     data.append((char) cdpt->cf);
     unsigned char cmd = (char) (cdpt->cf & (char) 0x07);
     bool NA = (cdpt->cf >> 5) & 0x01;
-    if (!NA)data += dump(cdpt->SID);
+    if (!NA) {
+        data += dump(cdpt->SID);
+        data += dump(QDateTime::currentMSecsSinceEpoch()); // 发送时间
+    }
     if ((cmd == 2) || (cmd == 3))data += dump(cdpt->AID);
     if ((cdpt->cf >> 6) & 0x01)data += cdpt->data;
     cm->send_(IP, port, data);
@@ -220,7 +172,7 @@ void CFUP::updateSendBuf_() { // 更新发送缓存
     sendBufLv2.pop_front();
     // 全部序列化到一级缓存
     if (data.size() <= dataBlockSize) { // 数据包长度小于块大小
-        auto cdpt = newCDPT();
+        auto cdpt = newCDPT_();
         cdpt->data = data;
         cdpt->cf = 0x40;
         cdpt->SID = ID + sendWnd.size();
@@ -238,7 +190,7 @@ void CFUP::updateSendBuf_() { // 更新发送缓存
         }
         auto baseID = sendWnd.size(); // 获取当前窗口长度
         for (qsizetype j = 0; j < dataBlock.size(); j++) {
-            auto cdpt = newCDPT();
+            auto cdpt = newCDPT_();
             cdpt->data = dataBlock[j];
             cdpt->SID = ID + j + baseID;
             if (j != dataBlock.size() - 1)cdpt->cf = 0xC0; // 链表包
@@ -248,7 +200,7 @@ void CFUP::updateSendBuf_() { // 更新发送缓存
     }
 }
 
-CDPT *CFUP::newCDPT() {
+CDPT *CFUP::newCDPT_() {
     auto *cdpt = new CDPT(this);
     connect(cdpt, &CDPT::timeout, this, &CFUP::sendTimeout_);
     return cdpt;
@@ -282,12 +234,21 @@ QByteArrayList CFUP::readAll() {
     return tmp;
 }
 
-void CFUP::NA_ACK(unsigned short AID) {
+void CFUP::NA_ACK_(unsigned short AID) {
     auto cdpt = new CDPT(this);
     cdpt->AID = AID;
     cdpt->cf = (char) 0x22;
     sendPackage_(cdpt);
     delete cdpt;
+}
+
+bool CFUP::time_(unsigned short SID, long long time) {
+    if (recvLastTime.contains(SID)) {
+        if (recvLastTime[0] >= time)return false;
+        return true;
+    }
+    recvLastTime[SID] = time;
+    return true;
 }
 
 CFUP::~CFUP() = default;

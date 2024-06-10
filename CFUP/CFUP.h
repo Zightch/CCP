@@ -27,6 +27,7 @@ public:
     bool hasData();
 
     QByteArrayList readAll();
+
 public slots:
 
 signals:
@@ -52,6 +53,7 @@ private:
     unsigned short ID = 0; // 自己的包ID
     unsigned short OID = -1; // 对方当前包ID
 
+    QHash<unsigned short, long long> recvLastTime; // 接收窗口历史接收到的最大的时间
     QHash<unsigned short, CDPT *> sendWnd; // 发送窗口
     QHash<unsigned short, CFUPDP> recvWnd; // 接收窗口
     QList<CDPT *> sendBufLv1; // 发送1级缓存
@@ -88,9 +90,21 @@ private:
 
     void sendPackage_(CDPT *); // 返回值是NA
 
-    CDPT *newCDPT(); // new一个CDPT
+    CDPT *newCDPT_(); // new一个CDPT
 
-    void NA_ACK(unsigned short);
+    void NA_ACK_(unsigned short);
+
+    void cmdRC_(const QByteArray &);
+
+    void cmdACK_(bool, const QByteArray &);
+
+    void cmdRC_ACK_(bool, const QByteArray &);
+
+    void cmdC_(bool, bool, const QByteArray &);
+
+    void cmdH_(bool, const QByteArray &);
+
+    bool time_(unsigned short, long long);
 
     friend class CFUPManager;
 

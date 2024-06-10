@@ -16,12 +16,11 @@ void CFUPManager::proc_(const QHostAddress &IP, unsigned short port, const QByte
         if (connecting.contains(ipPort))connecting[ipPort]->proc_(data);
         return;
     }
-    const char *dataC = data.data();
-    char cf = dataC[0];
-    if ((cf & 0x07) != 0x01)return; // 如果不是连接请求, 直接丢弃
-    if (data.size() < 3)return; // 数据包不完整
-    unsigned short SID = (*(unsigned short *) (dataC + 1)); // 提取SID
-    if (((cf >> 5) & 0x01) || SID != 0)return; // NA位不能为1, SID必须是0
+    if (data.size() != 11)return; // 长度不正确
+    char cf = data[0];
+    if (cf != 0x11 && cf != 0x01)return; // 如果不是连接请求, 直接丢弃
+    unsigned short SID = (*(unsigned short *) (data.data() + 1)); // 提取SID
+    if (SID != 0)return; // SID必须是0
     if (cfup.size() >= connectNum)return; // 连接上限
     auto tmp = new CFUP(this, IP, port);
     connecting[ipPort] = tmp;

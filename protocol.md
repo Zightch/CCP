@@ -1,9 +1,10 @@
 # CFUP协议
-### 版本25
+### 版本26
 ### CSG Framework Universal Protocol
 ### CSG框架 通用协议
 
 ## 更新日志
+* 加入time以标识数据包发送的时间(26)
 * CCP更名CFUP(25)
 * 限制可靠传输时数据包长度与窗口大小, 优化某些细节字眼(24)
 * CSCP更名CCP(23)
@@ -49,52 +50,67 @@
         <td>0</td>
         <td>1</td>
         <td>2</td>
-        <td>3</td>
-        <td>4</td>
-        <td>5</td>
+        <td>3 ~ 10</td>
+        <td>11</td>
+        <td>12</td>
+        <td>13</td>
         <td>...</td>
     </tr>
     <tr>
         <td>S0</td>
         <td>cf</td>
         <td colspan=2>SID</td>
+        <td>time</td>
         <td colspan=4></td>
     </tr>
     <tr>
         <td>S1</td>
         <td>cf</td>
+        <td colspan=2>SID</td>
+        <td>time</td>
         <td colspan=2>AID</td>
-        <td colspan=4></td>
+        <td colspan=2></td>
     </tr>
     <tr>
         <td>S2</td>
         <td>cf</td>
         <td colspan=2>SID</td>
-        <td colspan=2>AID</td>
-        <td colspan=2></td>
+        <td>time</td>
+        <td colspan=3>data</td>
+        <td>...</td>
+    </tr>
+</table>
+<table>
+    <tr>
+        <td>字节</td>
+        <td>0</td>
+        <td>1</td>
+        <td>2</td>
+        <td>3</td>
+        <td>...</td>
     </tr>
     <tr>
         <td>S3</td>
         <td>cf</td>
-        <td colspan=5>data</td>
-        <td>...</td>
+        <td colspan=2>AID</td>
+        <td colspan=2></td>
     </tr>
     <tr>
         <td>S4</td>
         <td>cf</td>
-        <td colspan=2>SID</td>
         <td colspan=3>data</td>
         <td>...</td>
     </tr>
 </table>
 
 ### 名称含义
-| 名称 | 含义 |
-| :-: | :-: |
-| cf | 命令和属性 |
-| SID | 本包ID |
-| AID | 应答包ID |
-| data | 用户数据 |
+| 名称 | 含义 | 数据类型 |
+| :-: | :-: | :-: |
+| cf | 命令和属性 | byte |
+| SID | 本包ID | ushort(uint16) |
+| time | 时间戳 | long(int64) |
+| AID | 应答包ID | ushort(uint16) |
+| data | 用户数据 | byte[] |
 
 ### 协议表说明
 * 协议表中前1个字节固定长度: cf
@@ -107,6 +123,7 @@
   * 当cmd的NA位为true时, 本包ID可忽略
   * 当包ID大于65535时从0开始
 * AID应答包ID: 表示应答对方的包ID号, 当cmd为ACK时, 需要应答包ID号
+* time表示该数据包发送的时间
 * data用户数据: 表示该包中的用户数据
 
 ## cf命令和属性
@@ -172,6 +189,7 @@
   * 用户数据长度最大不超过`1013Byte`, 若超过`1013Byte`, 将会把数据包拆成若干个链表包(`1013Byte`为自定数据块大小, 最大不能超过[65524Byte](#连接问题))
   * 将用户单个数据包最大长度定义为m(参考上一条规则), 发送窗口大小最大为`96`个, 也就是一瞬间最多允许发送`96` * m数据. 若发送的数据包超过`96`个, 多出来的数据包将队列到发送缓存, 当窗口内有连续性被应答的数据包, 窗口立即向后滑动(`96`为自定发送窗口大小, 最大不能超过65533)
   * 如果对方应答超时后重发数据包, RT必须为true, 否则可能会造成接收方误判
+  * 接收方需要记录接收到对方SID的最后接收的时间time, 以免出现这种情况: 我先接收到RT数据包, 然后接收到原数据包, 导致通信错误. 如果先接收到RT包, 那么RT包的time一定比原包大, 那么原包被丢弃, 不做处理
 * 当NA位为true时, 表示立即发送的数据无需应答, 此时可以不保证可靠传输, 无需经过窗口
 * 在连接过程或者通信过程中, 如果任意一端出现不可修复的特殊情况或错误, 可以发送C NA UD data数据包来立即终止本次通信, data的内容为错误信息
 * 普通数据传输可代替心跳包. 心跳包的作用只是在连接空闲时检测对方在线状态, 如果普通数据传输正常, 说明对方在线状态正常, 此时无需发送心跳
